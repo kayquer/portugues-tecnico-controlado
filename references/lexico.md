@@ -35,7 +35,8 @@ Não existe dicionário oficial de português controlado (ver `SKILL.md`, "Por q
 | tratar | capturar *(exceção)* / resolver *(problema)* | — |
 | subir / derrubar / startar | iniciar / parar / implantar | gíria de plantão |
 | vale ressaltar / é importante notar | corte | metatexto |
-| basicamente / simplesmente / apenas | corte | minimizador; muda o fato |
+| basicamente / simplesmente / apenas *(hedge: `é apenas um bug menor`)* | corte | minimizador; muda o fato |
+| apenas / somente *(quantidade: `apenas um teste`)* | mantenha | não é hedge: restringe a quantidade. Cortar muda o fato, e a PTC-5 prescreve `apenas` para o sentido anteposto |
 
 ## Conectores ambíguos
 

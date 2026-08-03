@@ -200,6 +200,13 @@ def main():
                 print(f"    faltou:          {', '.join('PTC-' + x for x in faltou)}")
             if proibidos:
                 print(f"    corrigiu indevidamente: {', '.join(proibidos)}")
+            # Sem nenhum dos dois: nunca houve resposta para avaliar. Continua
+            # FAIL — caso não verificado não é caso verde —, mas dizer qual das
+            # duas coisas aconteceu é o que separa quebra da skill de ruído de
+            # infra. Sem esta linha as duas saem idênticas na tela.
+            if not faltou and not proibidos:
+                print(f"    {CINZA}sem resposta do modelo (timeout de {TIMEOUT}s ou "
+                      f"erro da API) — não é regressão da skill{RESET}")
 
     total = len(casos)
     print(f"\n{total - falhas}/{total} casos ok", end="")

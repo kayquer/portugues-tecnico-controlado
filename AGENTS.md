@@ -67,6 +67,7 @@ Se a mudança toca mais de uma regra, quebre em sessões e rode `./init.sh` entr
 ./init.sh --cobertura              # matriz regra × (positivo, contra-teste) — não chama o Claude
 PTC_MODELO=opus ./init.sh          # modelo diferente
 PTC_TENTATIVAS=1 ./init.sh         # sem retry (para medir flakiness)
+PTC_TIMEOUT=600 ./init.sh          # timeout por chamada (default: 300s)
 ```
 
 ## Loops
@@ -96,10 +97,19 @@ O runner repete cada caso até `PTC_TENTATIVAS` (3) antes de reprovar, porque a 
 | `FLAKY` | passou numa retentativa — conta como ok, mas aparece destacado |
 | `FAIL` | falhou as 3 tentativas — quebra real |
 
-**Flaky recorrente merece investigação**, não tolerância. Aponta para uma de duas coisas:
+**Flaky recorrente merece investigação**, não tolerância. Aponta para uma de três coisas — e a linha de detalhe abaixo do `FAIL` diz qual:
 
-1. **Asserção frágil** — o termo em `nao-marca` é longo demais e some por reformulação legítima. `chave de API do banco de dados` é assim: a skill pode reescrever a frase por outro motivo sem que a PTC-5 tenha dado falso positivo. Conserto: encurtar o termo para o núcleo que realmente prova a regra.
-2. **Regra ambígua** — o modelo hesita porque a regra não decide o caso. Conserto: no `SKILL.md`, não no teste.
+| Detalhe impresso | Causa | Conserto |
+|---|---|---|
+| `corrigiu indevidamente: <termo>` | **asserção frágil** — o termo de `nao-marca` some por reescrita legítima | encurtar o termo para o núcleo que prova a regra |
+| `faltou: PTC-N` | **regra ambígua** — o modelo hesita porque a regra não decide o caso | no `SKILL.md`/`references`, **não** no teste |
+| `sem resposta do modelo` | **infra** — timeout ou erro da API | nenhum; rode de novo |
+
+**Asserção frágil, caso real:** `caso-08` pedia `chave de API do banco de dados` intacto. A PTC-6 expande `API` na primeira ocorrência — `chave da Interface de Programação de Aplicações (API) do banco de dados` — e o substring literal morre sem que a PTC-5 tenha dado falso positivo algum. Encurtado para `do banco de dados`, que prova a mesma coisa (a cadeia de `de` não foi quebrada) e sobrevive à expansão.
+
+**Regra ambígua, caso real:** `apenas` estava nos dois lados da skill — `SKILL.md` (PTC-5) prescrevia `apenas um teste` como a forma correta do sentido anteposto, e `lexico.md` mandava cortar `apenas` como minimizador. Os dois arquivos vão concatenados no mesmo prompt, então o modelo decidia diferente a cada rodada. A entrada do léxico foi dividida em hedge (`é apenas um bug`, corte) e quantidade (`apenas um teste`, mantenha).
+
+**Infra:** `FAIL` sem `faltou` e sem `corrigiu` significa que nunca houve resposta para avaliar. Continua contando como falha — caso não verificado não é caso verde — mas não é regressão. Suba `PTC_TIMEOUT` se for recorrente.
 
 Casos com histórico de instabilidade estão registrados em `loops/loop-state.md`.
 
