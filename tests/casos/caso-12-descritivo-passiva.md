@@ -11,25 +11,21 @@
      1. `é gerado`  — voz passiva sem ator (linha "Voz passiva": proibida em estrito)
      2. `tempo de resposta do serviço de fila` — cadeia de `de` de 3 nós (≤2 em estrito)
 
-     A terceira frase (`Verifica-se`) NÃO está em `nao-marca`, e isso é
-     deliberado. Medida 6×, ela sobrevive 2/6: a skill ora mantém, ora converte
-     para `A integridade dos arquivos é verificada`, ora inventa ator (`o sistema
-     verifica`). Não é asserção frágil — é a skill se contradizendo:
+     A terceira frase (`Verifica-se`) sobrevivia 2/6 quando a skill se
+     contradizia: a tabela de níveis liberava `-se` passivo em `descritivo`, e o
+     teste mecânico do corpo da PTC-1 (`é/são + particípio`) classificava
+     justamente este `-se` como proibido. Os dois iam concatenados no mesmo
+     prompt e o modelo decidia diferente a cada rodada — mesma família do
+     `apenas` em `loop-state.md`.
 
-       · tabela de níveis: `PTC-1 sem -se passivo` = "ok em descrição sem ator"
-       · corpo da PTC-1: teste mecânico "se dá para reescrever com é/são +
-         particípio sem mudar o sentido, é o `se` proibido" — que classifica
-         justamente este `-se` como proibido
-
-     Os dois trechos vão concatenados no mesmo prompt, então o modelo decide
-     diferente a cada rodada. Mesma família do `apenas` em `loop-state.md`.
-     Corrigir a regra é outra sessão; `contra-teste:` não declara PTC-1 porque
-     este caso não consegue provar PTC-1 enquanto a contradição existir. -->
+     Resolvido a favor da tabela: o teste mecânico ganhou cláusula de nível.
+     Só por isso `Verifica-se` entrou em `nao-marca` e o caso passou a declarar
+     `contra-teste: PTC-1`. -->
 # caso: contra-teste de nível — o que `descritivo` libera e `estrito` proíbe
 nivel: descritivo
 espera:
-contra-teste: PTC-5
-nao-marca: é gerado, tempo de resposta do serviço de fila
+contra-teste: PTC-1, PTC-5
+nao-marca: é gerado, tempo de resposta do serviço de fila, Verifica-se
 
 ## entrada
 O relatório é gerado ao fim de cada ciclo. Verifica-se a integridade dos arquivos antes do envio. O tempo de resposta do serviço de fila permanece abaixo de 200 ms.

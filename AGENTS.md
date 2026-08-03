@@ -106,12 +106,15 @@ O runner repete cada caso até `PTC_TENTATIVAS` (3) antes de reprovar, porque a 
 |---|---|---|
 | `corrigiu indevidamente: <termo>` | **asserção frágil** — o termo de `nao-marca` some por reescrita legítima | encurtar o termo para o núcleo que prova a regra |
 | `faltou: PTC-N` | **regra ambígua** — o modelo hesita porque a regra não decide o caso | no `SKILL.md`/`references`, **não** no teste |
+| `faltou: PTC-N` | **colisão de rótulo** — a correção sai certa e a linha é etiquetada com outra regra | dizer no `SKILL.md` onde a regra **não** mora, não só onde mora |
 | `não apareceu: <termo>` | **âncora frágil** — o `deve-conter` fixa uma escolha que a skill não é obrigada a fazer | desambiguar a **entrada**, não encurtar a âncora |
 | `sem resposta do modelo` | **infra** — timeout ou erro da API | nenhum; rode de novo |
 
 **Âncora frágil, caso real:** `caso-11` entrava com `Pacote enviado às 14h30` e ancorava `agente enviou` — 3/5. Com marca de tempo, `O agente envia` e `O agente enviou` são as duas corretas, porque a entrada não diz se aquilo é log de evento passado ou comportamento recorrente. Trocado por `ao servidor`, que força a leitura de ação em presente: 5/5. O conserto foi na entrada; encurtar a âncora teria escondido a ambiguidade em vez de removê-la.
 
 **Asserção frágil, caso real:** `caso-08` pedia `chave de API do banco de dados` intacto. A PTC-6 expande `API` na primeira ocorrência — `chave da Interface de Programação de Aplicações (API) do banco de dados` — e o substring literal morre sem que a PTC-5 tenha dado falso positivo algum. Encurtado para `do banco de dados`, que prova a mesma coisa (a cadeia de `de` não foi quebrada) e sobrevive à expansão.
+
+**Colisão de rótulo, caso real:** `caso-01` citava PTC-6 em 4/5. As duas hipóteses — não aplicou, ou aplicou e não citou — dão a mesma saída no runner, e só o texto final bruto separa. Rodando 6× e procurando `APIs`: a correção saiu **6/6**, e em 2 delas a linha veio como `PTC-8 (apóstrofo não marca plural)`. Plural de sigla parece ortografia; o `SKILL.md` dizia que a regra mora na PTC-6 e não dizia que ela não mora na PTC-8. Com a cláusula de fronteira na PTC-8: 11/11. **Diagnostique olhando a saída bruta antes de mexer na regra** — as duas hipóteses mandavam para lugares opostos.
 
 **Regra ambígua, caso real:** `apenas` estava nos dois lados da skill — `SKILL.md` (PTC-5) prescrevia `apenas um teste` como a forma correta do sentido anteposto, e `lexico.md` mandava cortar `apenas` como minimizador. Os dois arquivos vão concatenados no mesmo prompt, então o modelo decidia diferente a cada rodada. A entrada do léxico foi dividida em hedge (`é apenas um bug`, corte) e quantidade (`apenas um teste`, mantenha).
 

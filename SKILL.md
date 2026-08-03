@@ -48,6 +48,7 @@ A regra número um, porque em português a 3ª pessoa do singular colapsa `ele`/
 - **Sujeito lexical em toda oração finita.** Única exceção: imperativo dirigido ao leitor.
 - **Contra-regra obrigatória:** em coordenação com o mesmo sujeito, **não** repita — senão o texto vira gagueira. Se o sujeito muda, quebre em duas frases.
 - **Sem `-se` apassivador ou indeterminador.** Teste mecânico, sem metalinguagem: *se dá para reescrever com "é/são + particípio" sem mudar o sentido, é o `se` proibido.* `Faz-se a validação` → `A validação é feita` ✅ logo é proibido. Já `o serviço se reinicia` (pronominal inerente) passa.
+  **O teste só reprova em `estrito`.** Em `descritivo`, `-se` apassivador sem ator relevante fica — a mesma licença que a tabela de níveis dá à voz passiva. `Verifica-se a integridade dos arquivos` ✅ em descrição de sistema, ❌ em procedimento. Não invente ator (`o sistema verifica`) para fugir do `-se`: ator inventado é fato inventado.
 - **Sem clítico de 3ª pessoa** (`o`, `a`, `os`, `as`, `lhe`), **sem mesóclise** (`far-se-á`), **sem `o mesmo`**, **sem demonstrativo apontando para fora da frase.** Repita o substantivo.
 
 > ❌ Envia o e-mail e atualiza o status. *(quem?)*
@@ -164,6 +165,8 @@ O hífen com prefixo é onde o vocabulário de TI mais erra:
 Também: trema abolido (`frequência`, `sequência`, `bilíngue`); ditongo aberto em paroxítona sem acento (`ideia`, `assembleia`, `heroico`); sem circunflexo em `oo`/`ee` (`voo`, `leem`, `creem`, `veem`); diferenciais abolidos (`para`, `pelo`, `polo`, `pera`) mas **mantidos** `pôr` e `pôde`.
 
 Casos de detalhe, armadilhas de TI e a lista do que **não** é erro: **`references/ortografia-ptbr.md`**. Em dúvida de grafia, consulte o VOLP — não deduza.
+
+**Fronteira com a PTC-6.** Plural de sigla (`API's` → `APIs`), gênero e artigo de sigla e variante BR (`ficheiro` → `arquivo`) **parecem** ortografia e não são: rotule como **PTC-6**. Aqui só entra o que o Acordo de 1990 decide — hífen, acento, trema, grafia da palavra comum.
 
 ## Níveis
 

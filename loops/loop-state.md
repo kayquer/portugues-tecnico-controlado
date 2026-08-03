@@ -9,9 +9,9 @@ Atualize **ao fim de cada rodada**, antes de começar a próxima.
 - **Cobertura:** positivo 8/8 ✓ · contra-teste 8/8 ✓ — **matriz fechada**
 - **Rodadas:** 6 de 12
 - **Suite:** 12 casos
-- **Status:** objetivo atingido em 2026-08-02; harness auditado em 2026-08-03
-- **Suite:** 12/12, exit 0, 1 `FLAKY` (`caso-01`)
-- **Abertos:** (1) contradição sobre `-se` apassivador em `descritivo`; (2) `caso-01` cita PTC-6 em 4/5
+- **Status:** objetivo atingido em 2026-08-02; harness auditado e dois achados fechados em 2026-08-03
+- **Suite:** 12/12, exit 0, 2 `FLAKY` (`caso-02`, `caso-03`)
+- **Abertos:** nenhum achado de regra. Ver "resíduo" ao fim.
 
 ## Rodadas
 
@@ -170,6 +170,77 @@ Resolver pede rodar o caso até falhar e olhar o texto final bruto atrás de `AP
 Um harness também precisa de contra-teste. Cinco dos seis buracos eram do mesmo formato: a asserção existia no arquivo e não existia no código, e nada verificava a distância entre as duas.
 
 O sexto é de outra natureza e apareceu duas vezes nesta sessão (`caso-11`, `caso-01`): **comportamento correto com rótulo instável**. A skill conserta e nomeia a linha de um jeito diferente a cada rodada, e uma asserção sobre `PTC-N` citada mede o rótulo, não a correção. `deve-conter` existe para isso — quando o que importa é a correção, ancore na correção.
+
+## Sessão seguinte — os dois achados abertos, fechados (2026-08-03)
+
+A sessão anterior deixou dois achados medidos e não consertados, porque consertar
+era mudar a skill e o escopo dela era o harness. Esta sessão fechou os dois.
+
+### 1. `-se` em `descritivo` — resolvido a favor da tabela de níveis
+
+A contradição era entre a tabela (`PTC-1 sem -se passivo` = "ok em descrição sem
+ator") e o teste mecânico do corpo da PTC-1, que não tinha cláusula de nível.
+
+Decidido pela tabela, por coerência interna: a linha seguinte dela já libera voz
+passiva sem ator em `descritivo`, e proibir `-se` mas permitir `é verificada` não
+descreve política nenhuma. O teste mecânico ganhou a cláusula, mais a proibição
+explícita de fugir do `-se` inventando ator — que era **uma das três saídas
+observadas** (`o sistema verifica`) e a pior das três, porque inventa fato.
+
+`caso-12` passou a declarar `contra-teste: PTC-1` e `Verifica-se` entrou em
+`nao-marca`. Medido 5× com `PTC_TENTATIVAS=1`: **5/5**, contra 2/6 antes.
+
+### 2. `caso-01` e a PTC-6 — era rótulo, não lacuna
+
+A sessão anterior não determinou qual das duas hipóteses valia, e as duas
+produzem a mesma saída no runner. Rodando 6× e olhando o texto final bruto:
+
+| | Vezes |
+|---|---|
+| `API's` corrigido para `APIs` no texto final | **6/6** |
+| linha citada como `PTC-6` | 4/6 |
+| linha citada como `PTC-8 (apóstrofo não marca plural)` | 2/6 |
+
+Hipótese "aplicou e não citou", confirmada. A correção nunca falhou; o rótulo
+oscilava entre duas regras que a skill não separava.
+
+E a atração da PTC-8 é legítima — plural de sigla **é** ortografia pela leitura
+ingênua. O `SKILL.md` dizia onde a regra mora (PTC-6) e não dizia onde ela **não**
+mora. Conserto: a PTC-8 ganhou uma cláusula de fronteira nomeando os três casos
+que parecem ortografia e são PTC-6 (plural de sigla, gênero/artigo de sigla,
+variante BR).
+
+Medido depois, 11 rodadas com `PTC_TENTATIVAS=1`: **PTC-6 citada 11/11**.
+
+### O que a correção da fronteira custou
+
+Numa das 11 rodadas faltou **PTC-2**, regra que nunca tinha falhado neste caso.
+Não voltou nas 6 seguintes, então entra como observação única — a mesma barra que
+inocentou o `caso-02`. Mas a hipótese tem mecanismo: `Utilize as API's` era a
+linha que carregava PTC-2 (formas verbais misturadas) **e** o plural da sigla, e
+mover o rótulo do plural pode ter levado a linha inteira junto.
+
+`caso-01` é o mais largo da suite — 8 regras numa entrada só — e mexer no rótulo
+de uma delas mexe na competição por linha da tabela. Se PTC-2 voltar a faltar,
+o conserto não é na PTC-2: é quebrar a entrada do `caso-01` em duas.
+
+### Resíduo — dois `FLAKY` na suite completa
+
+`caso-02` e `caso-03` saíram `FLAKY` (passaram na 2ª de 3) na rodada final.
+Nenhum dos dois foi tocado nesta sessão. `caso-02` já foi medido 5/5 duas vezes
+em sessões anteriores e absolvido as duas; `caso-03` tem histórico de oscilar em
+`solicitamos`/`efetuem`. Não medidos aqui — registrar é honesto, chamar de verde
+não seria.
+
+### Lição
+
+Os dois achados tinham o mesmo formato e diagnóstico oposto ao esperado. Em
+nenhum dos dois a skill estava **errada**: num, ela mandava duas coisas
+incompatíveis; no outro, ela acertava e nomeava o acerto de dois jeitos. Nenhum
+teste consegue separar isso da saída do runner. Os dois só foram diagnosticados
+olhando texto bruto — o `caso-12` medindo qual das três saídas, o `caso-01`
+procurando `APIs` no texto final. **Quando um caso oscila, a saída bruta é o
+primeiro lugar, não o último.**
 
 ## Como retomar
 

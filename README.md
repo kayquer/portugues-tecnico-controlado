@@ -149,6 +149,8 @@ Linguagem controlada é deliberadamente plana. Aplicar rigor de procedimento a u
 
 As regras PTC-1, PTC-7 e PTC-8 **nunca relaxam**. Em comunicado, `o mesmo foi cancelado` e `1,000 clientes` continuam causando dano, e ortografia errada não fica menos errada porque o texto é informal.
 
+Uma exceção dentro da PTC-1: o `-se` apassivador é proibido só em `estrito`. Em documentação de sistema, `Verifica-se a integridade dos arquivos` fica — a mesma licença que `descritivo` dá à voz passiva sem ator. Explicitar um ator que o texto não tem é inventar fato.
+
 O resto sai em `leve`. O léxico controlado fica dispensado e a primeira pessoa passa a ser desejável.
 
 Um comunicado processado em `leve` recebe duas correções:
