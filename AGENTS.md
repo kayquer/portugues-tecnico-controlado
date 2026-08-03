@@ -63,9 +63,19 @@ Se a mudança toca mais de uma regra, quebre em sessões e rode `./init.sh` entr
 
 ```bash
 ./init.sh                          # roda tudo
-python3 tests/verify.py caso-01    # um caso só (match por substring)
+./init.sh caso-01                  # um caso só (match por substring)
+./init.sh --cobertura              # matriz regra × (positivo, contra-teste) — não chama o Claude
 PTC_MODELO=opus ./init.sh          # modelo diferente
+PTC_TENTATIVAS=1 ./init.sh         # sem retry (para medir flakiness)
 ```
+
+## Loops
+
+`loops/goal-cobertura.md` é um goal loop no formato do [learn-harness-engineering](https://github.com/walkinglabs/learn-harness-engineering) (lecture-13). Rode com `/loop` sem intervalo — o modelo se auto-pauta e para no critério do próprio arquivo.
+
+O critério de parada é **mecânico**: `./init.sh --cobertura` sai 0 quando toda regra tem caso positivo e contra-teste. Sem julgamento, sem "acho que já deu".
+
+Estado entre rodadas em `loops/loop-state.md`. Para um objetivo novo, escreva outro `goal-*.md` — cada um precisa de objetivo, verificação executável, condição de parada e restrições.
 
 O runner concatena `SKILL.md` + `references/*.md` **deste repo** e manda para `claude -p`. Ele testa o arquivo que você acabou de editar, não a cópia instalada em `~/.claude/skills/`.
 
@@ -75,6 +85,23 @@ Ele **não compara texto** — output de LLM não é determinístico. Compara o 
 - **falso positivo** — nenhum termo de `nao-marca:` foi marcado como violação
 
 Regra extra não reprova o caso.
+
+### FLAKY não é PASS silencioso
+
+O runner repete cada caso até `PTC_TENTATIVAS` (3) antes de reprovar, porque a suite oscila: rodando três vezes sem mudar nada, **casos diferentes falhavam a cada rodada**. Sem retry, o gate acusaria regressão inexistente e apontaria um culpado diferente toda vez.
+
+| Estado | Significado |
+|---|---|
+| `PASS` | passou de primeira |
+| `FLAKY` | passou numa retentativa — conta como ok, mas aparece destacado |
+| `FAIL` | falhou as 3 tentativas — quebra real |
+
+**Flaky recorrente merece investigação**, não tolerância. Aponta para uma de duas coisas:
+
+1. **Asserção frágil** — o termo em `nao-marca` é longo demais e some por reformulação legítima. `chave de API do banco de dados` é assim: a skill pode reescrever a frase por outro motivo sem que a PTC-5 tenha dado falso positivo. Conserto: encurtar o termo para o núcleo que realmente prova a regra.
+2. **Regra ambígua** — o modelo hesita porque a regra não decide o caso. Conserto: no `SKILL.md`, não no teste.
+
+Casos com histórico de instabilidade estão registrados em `loops/loop-state.md`.
 
 ### Custo e falso alarme
 

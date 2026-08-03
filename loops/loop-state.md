@@ -1,0 +1,70 @@
+# loop-state — goal-cobertura
+
+Estado entre rodadas do loop de `goal-cobertura.md`. Uma linha por rodada.
+Atualize **ao fim de cada rodada**, antes de começar a próxima.
+
+## Estado atual
+
+- **Objetivo:** `loops/goal-cobertura.md`
+- **Cobertura:** positivo 8/8 ✓ · contra-teste 8/8 ✓ — **matriz fechada**
+- **Rodadas:** 6 de 12
+- **Suite:** 9 casos
+- **Status:** objetivo atingido em 2026-08-02
+
+## Rodadas
+
+| # | Regra | Caso criado | Resultado |
+|---|---|---|---|
+| — | — | — | estado inicial: contra-teste 3/8 |
+| 1 | PTC-1 | `caso-05-contra-ptc1-sujeito` | verde — sujeito nulo em coordenação e `se` pronominal inerente sobrevivem |
+| 2 | PTC-2 | `caso-06-contra-ptc2-gerundio` | verde — gerúndio durativo e relativa restritiva sobrevivem |
+| 3 | PTC-3 | `caso-07-contra-ptc3-modal` | **vermelho → corrigido**. Ver abaixo. |
+| 4 | PTC-5 | `caso-08-contra-ptc5-adjetivo` | verde após retry — instável, ver abaixo |
+| 5 | PTC-7 | `caso-09-contra-ptc7-identificador` | verde — `v1.5` e `3.11` não viram decimal |
+| 6 | — | — | matriz fechada; retry adicionado ao runner |
+
+## Achados
+
+### Rodada 3 — o caso estava errado, não a skill
+
+O primeiro `caso-07` usava `Você deve encerrar a sessão em até 30 minutos` em nível `estrito`. A skill reescreveu, e com razão: aquilo é **instrução**, e a PTC-2 exige imperativo (`Encerre`), não `você deve`.
+
+`deve` de obrigação só é contra-teste válido em texto **descritivo**. Caso refeito com `nivel: descritivo` e a modalidade fora de instrução direta. Passou.
+
+É o cenário que o `goal.md` prevê no passo 4 — vermelho pode ser caso errado, não falso positivo. Aqui era caso errado.
+
+### Rodadas 4-6 — a suite oscilava, e esse foi o achado maior
+
+Rodando a suite três vezes seguidas sem mudar nada, **casos diferentes falhavam a cada vez**:
+
+| Rodada | Falhou |
+|---|---|
+| A | `caso-03` (`solicitamos`, `efetuem`), `caso-07` |
+| B | nenhum dos dois — `caso-03` passou 2× seguidas |
+| C | `caso-02` (faltou PTC-3), `caso-08` (`chave de API do banco de dados`) |
+
+Sem tratamento, a suite acusaria regressão inexistente toda rodada — e pior, apontaria um culpado diferente a cada vez. Um gate assim é ruído, não verificação.
+
+**Correção:** o runner repete o caso até `PTC_TENTATIVAS` (3) antes de reprovar, e distingue três estados:
+
+- `PASS` — passou de primeira
+- `FLAKY` — passou numa retentativa; conta como ok, mas aparece destacado
+- `FAIL` — falhou as três; aí é quebra real
+
+### O que o flaky recorrente significa
+
+Flaky não é só ruído de amostragem. Um caso que oscila com frequência aponta para uma de duas coisas:
+
+1. **Asserção frágil** — o termo de `nao-marca` é longo demais e qualquer reformulação legítima o quebra. `chave de API do banco de dados` é exatamente isso: a skill pode reescrever a frase por outro motivo e o trecho literal some sem que a PTC-5 tenha dado falso positivo.
+2. **Regra genuinamente ambígua** — o modelo hesita porque a regra não decide o caso. Aí o conserto é no `SKILL.md`, não no teste.
+
+`caso-02` (bilíngue, `should` → PTC-3) e `caso-08` são os candidatos a revisão numa próxima sessão.
+
+## Como retomar
+
+```bash
+./init.sh --cobertura   # onde está o gap (não chama o Claude, é instantâneo)
+./init.sh               # a suite continua verde?
+```
+
+As duas saindo 0 = objetivo atingido. Para reabrir o loop com objetivo novo, escreva outro `goal-*.md` — o de caça a falso positivo adversarial é o próximo candidato natural.

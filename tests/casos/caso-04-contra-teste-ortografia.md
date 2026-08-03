@@ -5,5 +5,7 @@ nivel: estrito
 espera: PTC-8
 nao-marca: front-end, back-end, data center, e-mail, usuário, arquivo, tela
 
+contra-teste: PTC-6, PTC-8
+
 ## entrada
 O time de front-end publicou a versão nova no data center. O back-end envia um e-mail para o usuário quando o arquivo aparece na tela. A infra-estrutura dos micro-serviços ficou estável.

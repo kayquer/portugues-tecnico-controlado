@@ -20,10 +20,11 @@ from pathlib import Path
 
 MODELO = os.environ.get("PTC_MODELO", "sonnet")
 TIMEOUT = int(os.environ.get("PTC_TIMEOUT", "300"))
+TENTATIVAS = int(os.environ.get("PTC_TENTATIVAS", "3"))
 AQUI = Path(__file__).resolve().parent
 REPO = AQUI.parent
 
-VERDE, VERMELHO, CINZA, RESET = "\033[32m", "\033[31m", "\033[90m", "\033[0m"
+VERDE, VERMELHO, AMARELO, CINZA, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[90m", "\033[0m"
 
 
 def carregar_skill():
@@ -52,8 +53,39 @@ def parse_caso(caminho):
         "nivel": meta.get("nivel", "estrito"),
         "espera": lista("espera"),
         "nao_marca": lista("nao-marca"),
+        "contra_teste": lista("contra-teste"),
         "entrada": entrada.strip(),
     }
+
+
+def cobertura(casos):
+    """Matriz regra × (caso positivo, contra-teste). Não chama o Claude.
+
+    É o critério de parada mecânico do goal loop em `loops/goal-cobertura.md`:
+    uma regra só está coberta quando existe caso que a faz disparar E caso que
+    prova que ela não dispara onde não deve.
+    """
+    pos = {str(n): [] for n in range(1, 9)}
+    neg = {str(n): [] for n in range(1, 9)}
+    for caminho in casos:
+        c = parse_caso(caminho)
+        for r in c["espera"]:
+            pos.get(r.split("-")[-1], []).append(c["nome"])
+        for r in c["contra_teste"]:
+            neg.get(r.split("-")[-1], []).append(c["nome"])
+
+    print(f"{'regra':<8}{'positivo':<14}contra-teste")
+    for n in map(str, range(1, 9)):
+        m = lambda v: f"{VERDE}✓{RESET} ({len(v)})" if v else f"{VERMELHO}✗{RESET}     "
+        print(f"PTC-{n:<4}{m(pos[n]):<23}{m(neg[n])}")
+
+    falta_pos = [n for n in map(str, range(1, 9)) if not pos[n]]
+    falta_neg = [n for n in map(str, range(1, 9)) if not neg[n]]
+    print(f"\npositivo:     {8 - len(falta_pos)}/8"
+          + (f"  faltam {', '.join('PTC-' + n for n in falta_pos)}" if falta_pos else "  ✓"))
+    print(f"contra-teste: {8 - len(falta_neg)}/8"
+          + (f"  faltam {', '.join('PTC-' + n for n in falta_neg)}" if falta_neg else "  ✓"))
+    return 1 if (falta_pos or falta_neg) else 0
 
 
 def rodar(skill, caso):
@@ -123,39 +155,58 @@ def avaliar(caso, saida):
 
 def main():
     casos = sorted((AQUI / "casos").glob("*.md"))
-    if len(sys.argv) > 1:
-        casos = [c for c in casos if sys.argv[1] in c.stem]
     if not casos:
         sys.exit("erro: nenhum caso encontrado em tests/casos/")
+
+    if "--cobertura" in sys.argv:
+        return cobertura(casos)
+
+    if len(sys.argv) > 1:
+        casos = [c for c in casos if sys.argv[1] in c.stem]
+        if not casos:
+            sys.exit(f"erro: nenhum caso casa com '{sys.argv[1]}'")
 
     skill = carregar_skill()
     print(f"{CINZA}skill: {len(skill.splitlines())} linhas · "
           f"modelo: {MODELO} · {len(casos)} caso(s){RESET}\n")
 
-    falhas = 0
+    falhas = instaveis = 0
     for caminho in casos:
         caso = parse_caso(caminho)
         print(f"{caso['nome']:.<40} ", end="", flush=True)
 
-        saida = rodar(skill, caso)
-        if saida is None:
-            print(f"{VERMELHO}ERRO{RESET}  (claude falhou ou estourou o timeout)")
-            falhas += 1
-            continue
+        # Output de LLM oscila: um caso pode falhar numa rodada e passar na
+        # seguinte. Sem retry, a suite acusa regressão que não existe — e pior,
+        # cada rodada acusa um caso diferente. Repetir separa quebra de ruído.
+        for tentativa in range(1, TENTATIVAS + 1):
+            saida = rodar(skill, caso)
+            if saida is None:
+                ok, faltou, proibidos = False, [], []
+                continue
+            ok, faltou, proibidos = avaliar(caso, saida)
+            if ok:
+                break
 
-        ok, faltou, proibidos = avaliar(caso, saida)
-        if ok:
-            print(f"{VERDE}PASS{RESET}  ({len(caso['espera'])}/{len(caso['espera'])} regras)")
+        n = len(caso["espera"])
+        if ok and tentativa == 1:
+            print(f"{VERDE}PASS{RESET}  ({n}/{n} regras)")
+        elif ok:
+            instaveis += 1
+            print(f"{AMARELO}FLAKY{RESET} (passou na {tentativa}ª de {TENTATIVAS})")
         else:
             falhas += 1
-            print(f"{VERMELHO}FAIL{RESET}")
+            print(f"{VERMELHO}FAIL{RESET}  ({TENTATIVAS} tentativas)")
             if faltou:
-                print(f"    faltou:          {', '.join('PTC-' + n for n in faltou)}")
+                print(f"    faltou:          {', '.join('PTC-' + x for x in faltou)}")
             if proibidos:
                 print(f"    corrigiu indevidamente: {', '.join(proibidos)}")
 
     total = len(casos)
-    print(f"\n{total - falhas}/{total} casos ok")
+    print(f"\n{total - falhas}/{total} casos ok", end="")
+    print(f" · {AMARELO}{instaveis} instável(is){RESET}" if instaveis else "")
+    if instaveis:
+        print(f"{CINZA}flaky recorrente = asserção frágil ou regra ambígua. "
+              f"Ver AGENTS.md.{RESET}")
     return 1 if falhas else 0
 
 
