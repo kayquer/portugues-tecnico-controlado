@@ -4,6 +4,13 @@ description: "Reescreve texto técnico em português do Brasil controlado — se
 version: 1.0.0
 ---
 
+<!--
+AVISO PARA QUEM VAI EDITAR ESTE ARQUIVO — não para quem está aplicando as regras.
+Se você está reescrevendo um texto do usuário, ignore este bloco e siga as regras abaixo.
+Se você está EDITANDO esta skill: os exemplos marcados ❌ contêm português errado
+DE PROPÓSITO — eles ensinam a regra. Não os "corrija". Leia AGENTS.md antes.
+-->
+
 # Português Técnico Controlado (PTC)
 
 Reescreve texto técnico em português do Brasil para que ele tenha **uma leitura só**. O leitor — humano operando um procedimento, ou um modelo consumindo uma instrução — não tem como perguntar "você quis dizer X ou Y?". O texto precisa responder antes.

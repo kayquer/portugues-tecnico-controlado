@@ -300,6 +300,27 @@ A pesquisa não confirmou três itens, e a skill declara isso em vez de citar no
 
 ---
 
+## Desenvolvimento
+
+> ⚠️ **Este repositório contém português errado de propósito.** Os casos em `tests/casos/` e os exemplos marcados `❌` são o material de trabalho da skill. Corrigi-los quebra a skill em silêncio. Leia [`AGENTS.md`](AGENTS.md) antes de editar qualquer coisa.
+
+```bash
+./init.sh                     # roda todos os casos de regressão
+./init.sh caso-01             # um caso só
+PTC_MODELO=opus ./init.sh     # outro modelo (default: sonnet)
+```
+
+O runner concatena `SKILL.md` + `references/*.md` **deste repo** e manda para `claude -p`. Ele testa o arquivo que você acabou de editar, não a cópia instalada em `~/.claude/skills/`.
+
+Como output de LLM não é determinístico, ele não compara texto. Verifica duas coisas:
+
+- **cobertura** — toda regra de `espera:` apareceu na tabela de violações
+- **falso positivo** — todo termo de `nao-marca:` sobreviveu intacto no texto reescrito
+
+O segundo é o que impede a skill de virar um corretor que "conserta" português correto. Detalhes do fluxo, definition of done e clean-state checklist em [`AGENTS.md`](AGENTS.md).
+
+Requisitos: [Claude Code](https://claude.com/claude-code) e Python 3. Sem dependências a instalar.
+
 ## Créditos
 
 O conceito de aplicar o ASD-STE100 como skill de agente veio de [danyuchn/asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill) (MIT). Este projeto reescreve as regras do zero para o português e não compartilha código com ele.
