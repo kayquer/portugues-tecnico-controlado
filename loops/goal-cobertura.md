@@ -59,4 +59,4 @@ Pare quando **qualquer uma** ocorrer:
 
 ## Custo
 
-Cada `./init.sh` completo são 4+ chamadas ao Claude. Prefira `./init.sh <caso-novo>` durante a rodada e deixe a suite inteira para o fim de cada rodada.
+A suite completa são 12 chamadas ao Claude quando tudo passa de primeira, mais uma por retentativa (`PTC_TENTATIVAS`, default 3). Prefira `./init.sh <caso-novo>` durante a rodada e deixe a suite inteira para o fim de cada rodada. `--cobertura` é grátis.

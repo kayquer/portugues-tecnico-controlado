@@ -4,7 +4,9 @@
 #
 #   ./init.sh                    todos os casos
 #   ./init.sh caso-01            um caso (match por substring)
+#   ./init.sh --cobertura        matriz de cobertura (não chama a API)
 #   PTC_MODELO=opus ./init.sh    outro modelo (default: sonnet)
+#   PTC_TENTATIVAS=1 ./init.sh   sem retry (para medir instabilidade)
 set -euo pipefail
 cd "$(dirname "$0")"
 

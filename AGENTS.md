@@ -44,6 +44,8 @@ Uma mudança na skill só está pronta quando **as quatro** valem:
 
 O item 3 é o que mais escapa. Ampliar uma regra quase sempre cria falso positivo, e um caso que só testa o acerto positivo não pega isso. Exemplo real: ampliar a PTC-8 para hifenizar mais prefixos pode fazer a skill "corrigir" `front-end`, que é convenção de estilo e não erro.
 
+O item 2 tem piso mecânico: o parser recusa caso que não assere nada (ver "O parser recusa caso inválido"). Antes disso, um typo no nome da chave produzia caso verde que verificava zero.
+
 ## Escopo
 
 **Uma regra PTC por sessão.** Mexer em duas ao mesmo tempo impede saber qual delas quebrou o caso — o runner só diz que a regra não disparou, não por quê.
@@ -80,10 +82,11 @@ Estado entre rodadas em `loops/loop-state.md`. Para um objetivo novo, escreva ou
 
 O runner concatena `SKILL.md` + `references/*.md` **deste repo** e manda para `claude -p`. Ele testa o arquivo que você acabou de editar, não a cópia instalada em `~/.claude/skills/`.
 
-Ele **não compara texto** — output de LLM não é determinístico. Compara o conjunto de regras `PTC-N` citadas na tabela de saída:
+Ele **não compara texto** — output de LLM não é determinístico. Verifica três coisas:
 
-- **cobertura** — toda regra de `espera:` apareceu
-- **falso positivo** — nenhum termo de `nao-marca:` foi marcado como violação
+- **cobertura** — toda regra de `espera:` apareceu na tabela de violações
+- **falso positivo** — todo termo de `nao-marca:` sobreviveu intacto no texto final
+- **âncora** — todo termo de `deve-conter:` apareceu na saída
 
 Regra extra não reprova o caso.
 
@@ -103,7 +106,10 @@ O runner repete cada caso até `PTC_TENTATIVAS` (3) antes de reprovar, porque a 
 |---|---|---|
 | `corrigiu indevidamente: <termo>` | **asserção frágil** — o termo de `nao-marca` some por reescrita legítima | encurtar o termo para o núcleo que prova a regra |
 | `faltou: PTC-N` | **regra ambígua** — o modelo hesita porque a regra não decide o caso | no `SKILL.md`/`references`, **não** no teste |
+| `não apareceu: <termo>` | **âncora frágil** — o `deve-conter` fixa uma escolha que a skill não é obrigada a fazer | desambiguar a **entrada**, não encurtar a âncora |
 | `sem resposta do modelo` | **infra** — timeout ou erro da API | nenhum; rode de novo |
+
+**Âncora frágil, caso real:** `caso-11` entrava com `Pacote enviado às 14h30` e ancorava `agente enviou` — 3/5. Com marca de tempo, `O agente envia` e `O agente enviou` são as duas corretas, porque a entrada não diz se aquilo é log de evento passado ou comportamento recorrente. Trocado por `ao servidor`, que força a leitura de ação em presente: 5/5. O conserto foi na entrada; encurtar a âncora teria escondido a ambiguidade em vez de removê-la.
 
 **Asserção frágil, caso real:** `caso-08` pedia `chave de API do banco de dados` intacto. A PTC-6 expande `API` na primeira ocorrência — `chave da Interface de Programação de Aplicações (API) do banco de dados` — e o substring literal morre sem que a PTC-5 tenha dado falso positivo algum. Encurtado para `do banco de dados`, que prova a mesma coisa (a cadeia de `de` não foi quebrada) e sobrevive à expansão.
 
@@ -115,7 +121,9 @@ Casos com histórico de instabilidade estão registrados em `loops/loop-state.md
 
 ### Custo e falso alarme
 
-Cada caso é uma chamada ao Claude; quatro casos por execução. O default é `sonnet` — Opus a cada rodada fica caro, e a asserção é sobre qual regra disparou, não sobre a qualidade da prosa.
+Cada caso é **até `PTC_TENTATIVAS` (3) chamadas** ao Claude, e a suite tem 12 casos — 12 chamadas quando tudo passa de primeira, mais uma por retentativa. O default é `sonnet`: Opus a cada rodada fica caro, e a asserção é sobre qual regra disparou, não sobre a qualidade da prosa.
+
+Durante o desenvolvimento, prefira `./init.sh <caso>` e deixe a suite inteira para o fim. `--cobertura` é grátis (não chama a API).
 
 **Se um caso falhar, rode com `PTC_MODELO=opus` antes de concluir que a skill quebrou.** Modelo menor às vezes não cita a regra na tabela mesmo tendo aplicado a correção.
 
@@ -131,11 +139,37 @@ nao-marca: front-end, usuário
 <texto que viola as regras esperadas>
 ```
 
-- `nivel` — `estrito`, `descritivo` ou `leve`
-- `espera` — regras que **devem** aparecer na tabela de violações
-- `nao-marca` — termos que **não podem** ser marcados como violação (pode ficar vazio)
+| Chave | O que faz |
+|---|---|
+| `nivel` | `estrito`, `descritivo` ou `leve` |
+| `espera` | regras que **devem** aparecer na tabela de violações |
+| `nao-marca` | termos que **não podem** ser marcados como violação — checados só no texto final |
+| `deve-conter` | termos que **devem** aparecer — checados na saída inteira |
+| `contra-teste` | regras que este caso prova não dispararem. Só alimenta `--cobertura` |
+| `destinatario` | `agente` ativa a flag do `SKILL.md` sobre `estrito` |
+| `bilingue` | `sim` pede o par EN/PT |
 
 O parser corta a saída antes da seção "mantido de propósito" para checar `nao-marca` — ali a skill cita a regra que *pegaria* o trecho, sem tê-lo corrigido, e isso acusaria falso positivo.
+
+`deve-conter` **não** é cortado: o que ele existe para provar — tabela de proposições do modo bilíngue, registro do linter reverso — fica fora do texto reescrito por desenho.
+
+### Quando usar `deve-conter`
+
+Quando o comportamento testado **não tem número PTC próprio** e a asserção por regra citada não o distingue de outro caso. Os três comportamentos da flag `destinatário: agente` são isso: `caso-11` é indistinguível de um PTC-1 comum pela tabela de violações, e só `deve-conter` prova que a flag mudou alguma coisa.
+
+**Âncora se mede, não se chuta.** Rode o caso 5× com `PTC_TENTATIVAS=1` e só aceite âncora 5/5. Uma que passa 3/5 vira `FLAKY` permanente e some no ruído. Ver `loop-state.md` para as duas âncoras que foram reprovadas e por quê.
+
+### O parser recusa caso inválido
+
+`parse_caso` mata o runner em vez de aceitar em silêncio. Um caso que não assere nada é pior que caso nenhum: ele conta como cobertura.
+
+| Erro | Por que é fatal |
+|---|---|
+| chave desconhecida | `espra: PTC-1` dava `PASS` sem verificar nada |
+| `espera`, `nao-marca` e `deve-conter` todos vazios | caso sem asserção |
+| `contra-teste` preenchido com `nao-marca` vazio | a matriz contava a regra coberta sem asserção por trás |
+| regra fora de `PTC-1..8` | `PTC-9` caía num `.get(..., [])` e sumia |
+| `nivel` que não existe | ia para o prompt como nível inventado |
 
 ## Clean-state checklist
 
@@ -159,8 +193,14 @@ references/
 tests/
   verify.py               # runner (Python 3 stdlib, sem dependências)
   casos/*.md              # casos de regressão
+loops/
+  goal-cobertura.md       # goal loop: matriz regra × (positivo, contra-teste)
+  loop-state.md           # estado entre rodadas + achados abertos
 init.sh                   # checa pré-requisitos e roda o verify
+AGENTS.md                 # este arquivo
 ```
+
+Só `SKILL.md` e `references/*.md` vão para o prompt. O resto é harness.
 
 ## Origem das decisões
 

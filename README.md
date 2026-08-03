@@ -274,11 +274,17 @@ A alegação de que linguagem controlada melhora tradução também é empiricam
 ```
 portugues-tecnico-controlado/
 ├── SKILL.md                        # 8 regras, 3 níveis, processo, formato de saída
-└── references/
-    ├── lexico.md                   # evite→use, conectores ambíguos, variante BR, siglas
-    ├── ortografia-ptbr.md          # Acordo de 1990, armadilhas de TI, o que não é erro
-    └── ingles.md                   # regras STE-EN, pipeline bilíngue, decalques e falsos amigos
+├── references/
+│   ├── lexico.md                   # evite→use, conectores ambíguos, variante BR, siglas
+│   ├── ortografia-ptbr.md          # Acordo de 1990, armadilhas de TI, o que não é erro
+│   └── ingles.md                   # regras STE-EN, pipeline bilíngue, decalques e falsos amigos
+├── tests/                          # harness de regressão — ver Desenvolvimento
+├── loops/                          # goal loops e estado entre sessões
+├── init.sh                         # roda a verificação
+└── AGENTS.md                       # como editar a skill sem quebrá-la
 ```
+
+**A skill é `SKILL.md` + `references/`.** O resto do repositório é harness de desenvolvimento e não vai para o prompt.
 
 Os arquivos de `references/` carregam sob demanda. O arquivo `ortografia-ptbr.md` entra quando surge dúvida de grafia; o arquivo `ingles.md` entra só quando o par EN/PT importa.
 
@@ -307,17 +313,24 @@ A pesquisa não confirmou três itens, e a skill declara isso em vez de citar no
 ```bash
 ./init.sh                     # roda todos os casos de regressão
 ./init.sh caso-01             # um caso só
+./init.sh --cobertura         # matriz de cobertura — não chama a API, é instantâneo
 PTC_MODELO=opus ./init.sh     # outro modelo (default: sonnet)
+PTC_TENTATIVAS=1 ./init.sh    # sem retry, para medir instabilidade
 ```
 
 O runner concatena `SKILL.md` + `references/*.md` **deste repo** e manda para `claude -p`. Ele testa o arquivo que você acabou de editar, não a cópia instalada em `~/.claude/skills/`.
 
-Como output de LLM não é determinístico, ele não compara texto. Verifica duas coisas:
+Como output de LLM não é determinístico, ele não compara texto. Verifica três coisas:
 
 - **cobertura** — toda regra de `espera:` apareceu na tabela de violações
 - **falso positivo** — todo termo de `nao-marca:` sobreviveu intacto no texto reescrito
+- **âncora** — todo termo de `deve-conter:` apareceu na saída
 
-O segundo é o que impede a skill de virar um corretor que "conserta" português correto. Detalhes do fluxo, definition of done e clean-state checklist em [`AGENTS.md`](AGENTS.md).
+O segundo é o que impede a skill de virar um corretor que "conserta" português correto. O terceiro cobre o que não tem número de regra próprio — a flag `destinatário: agente` e o pipeline bilíngue, que pela tabela de violações seriam indistinguíveis de um caso comum.
+
+Cada regra precisa de **dois** casos: um que a faz disparar e um contra-teste que prova que ela não dispara onde não deve. `./init.sh --cobertura` monta essa matriz e sai 0 quando ela fecha.
+
+Detalhes do fluxo, definition of done e clean-state checklist em [`AGENTS.md`](AGENTS.md).
 
 Requisitos: [Claude Code](https://claude.com/claude-code) e Python 3. Sem dependências a instalar.
 

@@ -4,11 +4,11 @@
 Roda cada caso de `casos/` contra o SKILL.md **deste repo** (não a cópia
 instalada em ~/.claude/skills/) e confere quais regras PTC dispararam.
 
-Não compara texto — output de LLM não é determinístico. Compara o conjunto de
-regras citadas na tabela de saída:
+Não compara texto — output de LLM não é determinístico. Verifica três coisas:
 
-  cobertura       toda regra de `espera:` apareceu
-  falso positivo  nenhum termo de `nao-marca:` foi marcado
+  cobertura       toda regra de `espera:` apareceu na tabela de violações
+  falso positivo  todo termo de `nao-marca:` sobreviveu no texto final
+  âncora          todo termo de `deve-conter:` apareceu na saída
 
 Regra extra não reprova. Uso: ./init.sh   ou   python3 tests/verify.py [caso]
 """
@@ -26,6 +26,11 @@ REPO = AQUI.parent
 
 VERDE, VERMELHO, AMARELO, CINZA, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[90m", "\033[0m"
 
+REGRAS = [str(n) for n in range(1, 9)]  # PTC-1..PTC-8
+NIVEIS = ("estrito", "descritivo", "leve")
+CHAVES = ("nivel", "espera", "nao-marca", "contra-teste",
+          "bilingue", "destinatario", "deve-conter")
+
 
 def carregar_skill():
     """Concatena a skill do repo. Testa o arquivo em edição, não o instalado."""
@@ -38,24 +43,66 @@ def carregar_skill():
 
 
 def parse_caso(caminho):
+    """Lê e **valida** um caso. Erro de cabeçalho mata o runner, não vira verde.
+
+    Um caso é uma asserção. Chave com typo, regra inexistente ou contra-teste
+    sem termo que sobreviva produzem um caso que passa sem verificar nada — e
+    um caso desses é pior que caso nenhum, porque conta como cobertura.
+    """
+    def erro(msg):
+        sys.exit(f"erro: {caminho.name}: {msg}")
+
     texto = caminho.read_text(encoding="utf-8")
     cabecalho, marcador, entrada = texto.partition("## entrada")
     if not marcador:
-        sys.exit(f"erro: {caminho.name} não tem o marcador '## entrada'")
+        erro("não tem o marcador '## entrada'")
     meta = dict(re.findall(r"^([\w-]+):[ \t]*(.+)$", cabecalho, re.MULTILINE))
+
+    if desconhecidas := sorted(set(meta) - set(CHAVES)):
+        erro(f"chave desconhecida: {', '.join(desconhecidas)}"
+             f"\n       conhecidas: {', '.join(CHAVES)}")
 
     def lista(chave):
         bruto = meta.get(chave, "").strip()
         return [x.strip() for x in bruto.split(",") if x.strip()] if bruto else []
 
-    return {
+    def regras(chave):
+        """Normaliza `PTC-4` para `4` e recusa o que não é regra."""
+        saida = []
+        for r in lista(chave):
+            n = r.split("-")[-1]
+            if n not in REGRAS:
+                erro(f"{chave}: '{r}' não é regra (esperado PTC-1..PTC-{REGRAS[-1]})")
+            saida.append(n)
+        return saida
+
+    caso = {
         "nome": caminho.stem,
-        "nivel": meta.get("nivel", "estrito"),
-        "espera": lista("espera"),
+        "nivel": meta.get("nivel", "estrito").strip(),
+        "destinatario": meta.get("destinatario", "").strip(),
+        "bilingue": meta.get("bilingue", "").strip().lower() in ("sim", "yes", "true"),
+        "espera": regras("espera"),
         "nao_marca": lista("nao-marca"),
-        "contra_teste": lista("contra-teste"),
+        "contra_teste": regras("contra-teste"),
+        "deve_conter": lista("deve-conter"),
         "entrada": entrada.strip(),
     }
+
+    if caso["nivel"] not in NIVEIS:
+        erro(f"nivel: '{caso['nivel']}' não existe (use {', '.join(NIVEIS)})")
+    if not (caso["espera"] or caso["nao_marca"] or caso["deve_conter"]):
+        erro("nenhuma asserção — 'espera', 'nao-marca' e 'deve-conter' vazios.\n"
+             "       Um caso assim passa verde sem verificar nada. "
+             "Causa comum: typo no nome da chave.")
+    # `contra-teste` só alimenta a matriz de cobertura; quem assere é `nao-marca`.
+    # Sem essa checagem, declarar a regra bastava para a matriz contá-la coberta.
+    # ponytail: exige `nao-marca` não vazio, não um termo por regra — amarrar
+    # termo↔regra pediria anotação por termo. Subir isso se um caso com 2
+    # contra-testes e 1 termo virar problema de verdade.
+    if caso["contra_teste"] and not caso["nao_marca"]:
+        erro("'contra-teste' declara regra mas 'nao-marca' está vazio.\n"
+             "       A matriz contaria a regra como coberta sem asserção nenhuma.")
+    return caso
 
 
 def cobertura(casos):
@@ -65,35 +112,45 @@ def cobertura(casos):
     uma regra só está coberta quando existe caso que a faz disparar E caso que
     prova que ela não dispara onde não deve.
     """
-    pos = {str(n): [] for n in range(1, 9)}
-    neg = {str(n): [] for n in range(1, 9)}
+    pos = {n: [] for n in REGRAS}
+    neg = {n: [] for n in REGRAS}
     for caminho in casos:
         c = parse_caso(caminho)
-        for r in c["espera"]:
-            pos.get(r.split("-")[-1], []).append(c["nome"])
-        for r in c["contra_teste"]:
-            neg.get(r.split("-")[-1], []).append(c["nome"])
+        for n in c["espera"]:
+            pos[n].append(c["nome"])
+        for n in c["contra_teste"]:
+            neg[n].append(c["nome"])
 
     print(f"{'regra':<8}{'positivo':<14}contra-teste")
-    for n in map(str, range(1, 9)):
+    for n in REGRAS:
         m = lambda v: f"{VERDE}✓{RESET} ({len(v)})" if v else f"{VERMELHO}✗{RESET}     "
         print(f"PTC-{n:<4}{m(pos[n]):<23}{m(neg[n])}")
 
-    falta_pos = [n for n in map(str, range(1, 9)) if not pos[n]]
-    falta_neg = [n for n in map(str, range(1, 9)) if not neg[n]]
-    print(f"\npositivo:     {8 - len(falta_pos)}/8"
+    total = len(REGRAS)
+    falta_pos = [n for n in REGRAS if not pos[n]]
+    falta_neg = [n for n in REGRAS if not neg[n]]
+    print(f"\npositivo:     {total - len(falta_pos)}/{total}"
           + (f"  faltam {', '.join('PTC-' + n for n in falta_pos)}" if falta_pos else "  ✓"))
-    print(f"contra-teste: {8 - len(falta_neg)}/8"
+    print(f"contra-teste: {total - len(falta_neg)}/{total}"
           + (f"  faltam {', '.join('PTC-' + n for n in falta_neg)}" if falta_neg else "  ✓"))
     return 1 if (falta_pos or falta_neg) else 0
 
 
 def rodar(skill, caso):
+    # Os três parâmetros do Passo 0 da skill. `destinatario` e `bilingue` só
+    # mudam o comportamento se chegarem ao prompt — antes eram lidos do
+    # cabeçalho e descartados, e o caso bilíngue passava só porque a própria
+    # entrada pedia o par EN/PT em prosa.
+    params = f"Nível: {caso['nivel']}."
+    if caso["destinatario"]:
+        params += f" Destinatário: {caso['destinatario']}."
+    if caso["bilingue"]:
+        params += " Bilíngue: sim."
     prompt = (
         f"{skill}\n\n"
         "---\n\n"
         "Aplique as regras acima ao texto abaixo. "
-        f"Nível: {caso['nivel']}. "
+        f"{params} "
         "Responda no formato de saída padrão da skill, com a tabela que nomeia "
         "cada regra PTC violada.\n\n"
         f"{caso['entrada']}"
@@ -139,18 +196,20 @@ def texto_final(saida):
 
 
 def avaliar(caso, saida):
-    """Devolve (ok, faltou, corrigidos_indevidamente)."""
-    citadas = set(re.findall(r"PTC-([1-8])\b", saida))
-    esperadas = {r.split("-")[1] for r in caso["espera"]}
-    faltou = sorted(esperadas - citadas, key=int)
+    """Devolve (ok, faltou, corrigidos_indevidamente, nao_apareceu)."""
+    citadas = set(re.findall(r"PTC-(\d+)\b", saida))
+    faltou = sorted(set(caso["espera"]) - citadas, key=int)
 
     # Contra-teste: o termo tem de sobreviver intacto no texto reescrito.
-    alvo = texto_final(saida)
-    if alvo is None:
-        alvo = saida  # sem seção de texto final, não dá para isolar — usa tudo
+    alvo = texto_final(saida) or saida  # sem seção final, não dá para isolar
     proibidos = [t for t in caso["nao_marca"] if t.lower() not in alvo.lower()]
 
-    return (not faltou and not proibidos), faltou, proibidos
+    # `deve-conter` procura na saída **inteira**, não no texto final: o que ele
+    # existe para provar — tabela de proposições do modo bilíngue, registro do
+    # linter reverso — fica fora do texto reescrito por desenho.
+    ausentes = [t for t in caso["deve_conter"] if t.lower() not in saida.lower()]
+
+    return (not (faltou or proibidos or ausentes)), faltou, proibidos, ausentes
 
 
 def main():
@@ -181,9 +240,9 @@ def main():
         for tentativa in range(1, TENTATIVAS + 1):
             saida = rodar(skill, caso)
             if saida is None:
-                ok, faltou, proibidos = False, [], []
+                ok, faltou, proibidos, ausentes = False, [], [], []
                 continue
-            ok, faltou, proibidos = avaliar(caso, saida)
+            ok, faltou, proibidos, ausentes = avaliar(caso, saida)
             if ok:
                 break
 
@@ -200,11 +259,13 @@ def main():
                 print(f"    faltou:          {', '.join('PTC-' + x for x in faltou)}")
             if proibidos:
                 print(f"    corrigiu indevidamente: {', '.join(proibidos)}")
-            # Sem nenhum dos dois: nunca houve resposta para avaliar. Continua
+            if ausentes:
+                print(f"    não apareceu:    {', '.join(ausentes)}")
+            # Sem nenhum dos três: nunca houve resposta para avaliar. Continua
             # FAIL — caso não verificado não é caso verde —, mas dizer qual das
             # duas coisas aconteceu é o que separa quebra da skill de ruído de
             # infra. Sem esta linha as duas saem idênticas na tela.
-            if not faltou and not proibidos:
+            if not (faltou or proibidos or ausentes):
                 print(f"    {CINZA}sem resposta do modelo (timeout de {TIMEOUT}s ou "
                       f"erro da API) — não é regressão da skill{RESET}")
 
