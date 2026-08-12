@@ -15,4 +15,12 @@ command -v claude  >/dev/null || { echo "falta: claude (https://claude.com/claud
 command -v python3 >/dev/null || { echo "falta: python3"; falta=1; }
 [ "$falta" -eq 0 ] || exit 1
 
+# Só na rodada completa. Durante o desenvolvimento de um caso, dist/ ainda não
+# precisa estar em dia — regenerar a cada iteração só suja o diff. Na rodada
+# que serve de gate, um bundle defasado é uma skill publicada diferente da
+# testada, e isso ninguém percebe olhando o verde dos casos.
+if [ $# -eq 0 ]; then
+  python3 tools/build.py --verificar || exit 1
+fi
+
 exec python3 tests/verify.py "$@"

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Português Técnico Controlado — instalar</title>
+<meta name="description" content="Instale a skill de português técnico controlado no Claude, ChatGPT, Perplexity, Cursor, Codex e outros agentes.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a5c4a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 17 10 11 4 5'/%3E%3Cline x1='12' y1='19' x2='20' y2='19'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#fbfbfa; --surface:#fff; --linha:#e4e2dd; --texto:#1c1b19; --fraco:#6b6862;
+  --acento:#1a5c4a; --acento-fraco:#e8f2ee; --code-bg:#f4f3f0; --raio:10px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#141413; --surface:#1c1c1a; --linha:#2e2d2a; --texto:#e9e7e2; --fraco:#918d85;
+    --acento:#5eb99a; --acento-fraco:#1b2c26; --code-bg:#232320;
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--texto);
+  font:16px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Inter,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:60rem; margin:0 auto; padding:3rem 1.25rem 5rem}
+a{color:var(--acento)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.875em}
+svg{width:1em; height:1em; stroke:currentColor; fill:none; stroke-width:2;
+    stroke-linecap:round; stroke-linejoin:round; flex:none}
+
+header{border-bottom:1px solid var(--linha); padding-bottom:2rem; margin-bottom:2.5rem}
+h1{font-size:clamp(1.6rem,4vw,2.25rem); line-height:1.2; margin:0 0 .75rem; letter-spacing:-.02em}
+.sub{color:var(--fraco); margin:0 0 1.25rem; max-width:44rem}
+.meta{display:flex; flex-wrap:wrap; gap:1rem; align-items:center; font-size:.875rem; color:var(--fraco)}
+.meta a{display:inline-flex; align-items:center; gap:.35rem; text-decoration:none}
+.meta a:hover{text-decoration:underline}
+.tag{background:var(--acento-fraco); color:var(--acento); border-radius:99px;
+     padding:.15rem .6rem; font-size:.8125rem; font-weight:500}
+
+h2{font-size:.8125rem; text-transform:uppercase; letter-spacing:.08em;
+   color:var(--fraco); font-weight:600; margin:2.75rem 0 1rem}
+h2:first-of-type{margin-top:0}
+
+.grid{display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(19rem,1fr))}
+.card{background:var(--surface); border:1px solid var(--linha); border-radius:var(--raio);
+      padding:1.25rem; display:flex; flex-direction:column; gap:.6rem}
+.card h3{margin:0; font-size:1rem; display:flex; align-items:center; gap:.5rem}
+.card h3 svg{color:var(--acento)}
+.card p{margin:0; font-size:.875rem; color:var(--fraco)}
+.card .acao{margin-top:auto; padding-top:.4rem}
+
+pre{background:var(--code-bg); border:1px solid var(--linha); border-radius:8px;
+    margin:0; padding:.7rem .8rem; overflow-x:auto; font-size:.8125rem; line-height:1.5}
+pre code{white-space:pre}
+
+button{
+  font:inherit; font-size:.875rem; font-weight:500; cursor:pointer;
+  display:inline-flex; align-items:center; gap:.45rem;
+  background:var(--surface); color:var(--texto);
+  border:1px solid var(--linha); border-radius:7px; padding:.45rem .8rem;
+  transition:background .15s ease, border-color .15s ease, color .15s ease;
+}
+button:hover{border-color:var(--acento); color:var(--acento)}
+button.ok{background:var(--acento-fraco); border-color:var(--acento); color:var(--acento)}
+button .ck{display:none}
+button.ok .cp{display:none}
+button.ok .ck{display:inline}
+
+.nota{border-left:2px solid var(--linha); padding:.1rem 0 .1rem 1rem;
+      color:var(--fraco); font-size:.875rem; margin:1.25rem 0 0}
+table{width:100%; border-collapse:collapse; font-size:.875rem; margin-top:.5rem}
+th,td{text-align:left; padding:.5rem .6rem; border-bottom:1px solid var(--linha); vertical-align:top}
+th{color:var(--fraco); font-weight:600; font-size:.8125rem}
+.rolagem{overflow-x:auto}
+footer{margin-top:3.5rem; padding-top:1.5rem; border-top:1px solid var(--linha);
+       color:var(--fraco); font-size:.875rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Português Técnico Controlado</h1>
+  <p class="sub">Reescreve texto técnico em português do Brasil para que ele tenha uma leitura só.
+  Tira sujeito oculto, <code>-se</code> apassivador, modal que é obrigação e probabilidade ao mesmo
+  tempo, e escopo decidido por vírgula. Funciona em qualquer agente — escolha o seu abaixo.</p>
+  <div class="meta">
+    <span class="tag">v{{VERSAO}}</span>
+    <a href="https://github.com/kayquer/portugues-tecnico-controlado">
+      <svg viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1.1-.8 1.7-.1.6-.1 1.3 0 2V22"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+      Repositório
+    </a>
+    <a href="https://github.com/kayquer/portugues-tecnico-controlado#readme">
+      <svg viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+      As 8 regras
+    </a>
+  </div>
+</header>
+
+<h2>Linha de comando</h2>
+<div class="grid">
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg> Claude Code</h3>
+    <p>Instala como skill nativa, com as referências carregando sob demanda. É a forma completa.</p>
+    <div class="acao">
+      <pre><code id="cmd-cc">git clone https://github.com/kayquer/portugues-tecnico-controlado ~/.claude/skills/portugues-tecnico-controlado</code></pre>
+      <p style="margin:.6rem 0 .5rem">Invoque com <code>/portugues-tecnico-controlado</code>.</p>
+      <button data-copy="#cmd-cc"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar comando</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13-2 2 2 2"/><path d="m14 17 2-2-2-2"/></svg> Codex · opencode · Jules · Aider</h3>
+    <p>Todos leem <code>AGENTS.md</code> da raiz do projeto. Um arquivo, nenhuma configuração.</p>
+    <div class="acao">
+      <pre><code id="cmd-agents">curl -o AGENTS.md https://raw.githubusercontent.com/kayquer/portugues-tecnico-controlado/main/dist/ptc-agents.md</code></pre>
+      <button data-copy="#cmd-agents"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar comando</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="m8 7-4 5 4 5"/><path d="m16 7 4 5-4 5"/></svg> Cursor</h3>
+    <p>Regra em <code>.cursor/rules/</code>, com <code>alwaysApply: false</code> — só entra quando o pedido combina.</p>
+    <div class="acao">
+      <pre><code id="cmd-cursor">mkdir -p .cursor/rules &amp;&amp; curl -o .cursor/rules/ptc.mdc https://raw.githubusercontent.com/kayquer/portugues-tecnico-controlado/main/dist/ptc.mdc</code></pre>
+      <button data-copy="#cmd-cursor"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar comando</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg> Gemini CLI</h3>
+    <p>Lê <code>GEMINI.md</code> da raiz. Mesmo conteúdo do <code>AGENTS.md</code>.</p>
+    <div class="acao">
+      <pre><code id="cmd-gemini">curl -o GEMINI.md https://raw.githubusercontent.com/kayquer/portugues-tecnico-controlado/main/dist/ptc-agents.md</code></pre>
+      <button data-copy="#cmd-gemini"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar comando</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+</div>
+
+<h2>Colar num campo de instrução</h2>
+<div class="grid">
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Claude.ai</h3>
+    <p>Suba como Skill, ou cole nas instruções de um Projeto. Cabe a versão completa, com exemplos e referências.</p>
+    <div class="acao">
+      <button data-copy="#bundle-completo"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar versão completa</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ChatGPT</h3>
+    <p>Instruções de Projeto ou de um GPT. O campo de <em>custom instructions</em> do perfil é curto demais para as duas versões.</p>
+    <div class="acao">
+      <button data-copy="#bundle-compacto"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar versão curta</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Perplexity</h3>
+    <p>Crie um Space e cole na instrução personalizada dele.</p>
+    <div class="acao">
+      <button data-copy="#bundle-compacto"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar versão curta</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> Kimi · DeepSeek · outros</h3>
+    <p>Qualquer chat com campo de instrução de sistema. Se o campo aceitar texto longo, prefira a versão completa.</p>
+    <div class="acao">
+      <button data-copy="#bundle-compacto"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar versão curta</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+</div>
+
+<p class="nota">Sem campo de instrução? Cole a versão curta como primeira mensagem da conversa e mande o
+texto na segunda. Funciona igual, só não sobrevive à próxima conversa.</p>
+
+<h2>Qual versão usar</h2>
+<div class="rolagem">
+<table>
+  <tr><th>Versão</th><th>O que traz</th><th>Quando</th></tr>
+  <tr>
+    <td><a href="https://github.com/kayquer/portugues-tecnico-controlado/blob/main/dist/ptc-completo.md">completa</a></td>
+    <td>As 8 regras com exemplos, os 3 níveis de rigor, o léxico, o Acordo de 1990 em detalhe e o pipeline EN/PT.</td>
+    <td>Agente com contexto grande, ou arquivo de projeto.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/kayquer/portugues-tecnico-controlado/blob/main/dist/ptc-compacto.md">curta</a></td>
+    <td>As 8 regras sem exemplos, a tabela de níveis, o formato de saída e as duas tabelas do léxico. Menos de metade do tamanho.</td>
+    <td>Campo de instrução com limite de caracteres. Se ainda assim recusar, cole como primeira mensagem.</td>
+  </tr>
+</table>
+</div>
+
+<p class="nota">O modo bilíngue EN/PT só existe na versão completa: o pipeline tem ordem obrigatória
+e não sobrevive ao corte.</p>
+
+<footer>
+  MIT · <a href="https://github.com/kayquer/portugues-tecnico-controlado">kayquer/portugues-tecnico-controlado</a> ·
+  Inspirado no <a href="https://www.asd-ste100.org/">ASD-STE100</a>, sem ser uma tradução dele.
+  Esta página é gerada por <code>tools/build.py</code> — não edite à mão.
+</footer>
+
+</div>
+
+<script type="text/plain" id="bundle-completo">{{COMPLETO}}</script>
+<script type="text/plain" id="bundle-compacto">{{COMPACTO}}</script>
+<script>
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-copy]");
+  if (!btn) return;
+  const alvo = document.querySelector(btn.dataset.copy);
+  if (!alvo) return;
+  try {
+    await navigator.clipboard.writeText(alvo.textContent.trim());
+    btn.classList.add("ok");
+    setTimeout(() => btn.classList.remove("ok"), 1600);
+  } catch {
+    // Clipboard exige contexto seguro. Em http:// puro, selecionar é o plano B.
+    const r = document.createRange();
+    r.selectNodeContents(alvo);
+    getSelection().removeAllRanges();
+    getSelection().addRange(r);
+  }
+});
+</script>
+</body>
+</html>

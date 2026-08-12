@@ -60,13 +60,35 @@ Se a mudança toca mais de uma regra, quebre em sessões e rode `./init.sh` entr
 | Numeração `PTC-N` | Os casos de teste referenciam por número. Renumerar quebra todos de uma vez. |
 | Tabela de níveis | PTC-1, PTC-7 e PTC-8 são obrigatórias nos três níveis. Relaxar qualquer uma em `leve` desmonta o desenho — ortografia errada não fica menos errada em texto informal. |
 | Seção "O que NÃO é erro" (`ortografia-ptbr.md`) | É o que impede a skill de virar corretor que conserta português correto. |
+| `dist/` e `docs/index.html` | São **gerados**. Edite `SKILL.md`/`references/` e rode `tools/build.py`. Editar o destino é a mesma classe de erro de corrigir um `❌`: some no próximo build, sem aviso. |
+
+## Versões portáteis
+
+`tools/build.py` acha a skill em `SKILL.md` + `references/*.md` e escreve cinco variantes em
+`dist/` mais a página `docs/index.html`. Três consertos que o bundle achatado exige, e que é o
+que o script existe para fazer: tirar o frontmatter YAML, tirar o aviso de edição, e reescrever
+`references/X.md` para o título da seção correspondente — no arquivo único esses caminhos
+apontam para nada.
+
+O script **morre com exit 1** se uma seção que ele corta ou mantém pelo nome não existir mais.
+Renomear um H2 do `SKILL.md` passa a quebrar o build em vez de emitir um bundle truncado em
+silêncio.
+
+`./init.sh` sem argumento roda `--verificar` antes dos casos. Com argumento (um caso, ou
+`--cobertura`) não roda: durante o desenvolvimento, regenerar `dist/` a cada iteração só suja o
+diff. O gate é a rodada completa — bundle defasado é uma skill publicada diferente da testada.
+
+Ao acrescentar um arquivo em `references/`, ele entra no bundle sozinho (o glob é ordenado).
+Ao acrescentar um destino de instalação, é a página que muda: `tools/index.template.html`.
 
 ## Verificação
 
 ```bash
-./init.sh                          # roda tudo
+./init.sh                          # roda tudo (checa dist/ antes; ver "Versões portáteis")
 ./init.sh caso-01                  # um caso só (match por substring)
 ./init.sh --cobertura              # matriz regra × (positivo, contra-teste) — não chama o Claude
+python3 tools/build.py             # regenera dist/ e docs/index.html
+python3 tools/build.py --verificar # só confere se estão em dia — não chama o Claude
 PTC_MODELO=opus ./init.sh          # modelo diferente
 PTC_TENTATIVAS=1 ./init.sh         # sem retry (para medir flakiness)
 PTC_TIMEOUT=600 ./init.sh          # timeout por chamada (default: 300s)
@@ -199,11 +221,16 @@ tests/
 loops/
   goal-cobertura.md       # goal loop: matriz regra × (positivo, contra-teste)
   loop-state.md           # estado entre rodadas + achados abertos
+tools/
+  build.py                # gera dist/ e docs/ — ver "Versões portáteis"
+  index.template.html     # molde da página de instalação (aqui é onde se edita)
+dist/                     # GERADO: bundles para agentes fora do Claude Code
+docs/index.html           # GERADO: página de instalação (GitHub Pages)
 init.sh                   # checa pré-requisitos e roda o verify
 AGENTS.md                 # este arquivo
 ```
 
-Só `SKILL.md` e `references/*.md` vão para o prompt. O resto é harness.
+Só `SKILL.md` e `references/*.md` vão para o prompt. O resto é harness ou saída gerada.
 
 ## Origem das decisões
 

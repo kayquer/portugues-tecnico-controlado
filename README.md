@@ -102,6 +102,24 @@ git clone https://github.com/kayquer/portugues-tecnico-controlado ~/.claude/skil
 
 O Claude Code registra a skill na próxima sessão. Sem dependências: nenhum pacote, nenhuma outra skill, nenhuma chamada de rede.
 
+### Outros agentes
+
+As regras são Markdown puro e não dependem do Claude Code. O que depende dele é o empacotamento — frontmatter YAML e `references/` carregadas sob demanda por caminho relativo. `dist/` traz o mesmo conteúdo achatado, com os caminhos reescritos para seções do próprio arquivo:
+
+| Arquivo | Onde |
+|---|---|
+| [`dist/ptc-agents.md`](dist/ptc-agents.md) | Codex, opencode, Jules, Aider — copie para a raiz do projeto |
+| [`dist/ptc.mdc`](dist/ptc.mdc) | Cursor, em `.cursor/rules/` |
+| [`dist/ptc-completo.md`](dist/ptc-completo.md) | Claude.ai (Skill ou instruções de Projeto), ou qualquer agente com contexto grande |
+| [`dist/ptc-compacto.md`](dist/ptc-compacto.md) | Versão sem exemplos, menos da metade do tamanho, para campo de instrução com limite |
+| [`dist/ptc-chat.txt`](dist/ptc-chat.txt) | ChatGPT, Perplexity, Kimi — mesmo conteúdo do compacto, em texto puro |
+
+**[A página de instalação](https://kayquer.github.io/portugues-tecnico-controlado/)** tem o comando ou o botão de copiar de cada um.
+
+O modo bilíngue EN/PT só existe na versão completa: o pipeline tem ordem obrigatória e não sobrevive ao corte.
+
+`dist/` e `docs/index.html` são gerados por `tools/build.py` — não edite à mão. `./init.sh` recusa rodar a suite completa se estiverem defasados.
+
 ## Uso
 
 Invoque pelo nome:
@@ -147,18 +165,7 @@ PTC-1 a PTC-5 tratam de **desambiguação** e exigem julgamento. PTC-6 a PTC-8 t
 + Valide o cadastro. Esse cadastro pertence ao cliente.        # PTC-5
 ```
 
-### A regra do hífen que mais paga
-
-PTC-8 cobre o Acordo Ortográfico de 1990 inteiro, mas um caso concentra quase todo o erro em texto de TI: **prefixo terminado em vogal + palavra começada por `r` ou `s` junta e dobra a consoante.**
-
-| Errado | Correto |
-|---|---|
-| micro-serviço, microserviço | **microsserviço** |
-| auto-serviço | **autosserviço** |
-| anti-racismo | **antirracismo** |
-| contra-regra | **contrarregra** |
-
-[`references/ortografia-ptbr.md`](references/ortografia-ptbr.md) traz a tabela completa de prefixos, a acentuação pós-Acordo, e as armadilhas de vocabulário técnico.
+A PTC-8 é higiene, não o ponto da skill: o Acordo de 1990 é regra fechada, e um corretor resolve boa parte dele. Fica porque um caso concentra quase todo o erro em texto de TI — prefixo terminado em vogal + palavra começada por `r` ou `s` junta e dobra a consoante (`micro-serviço` → **microsserviço**, `auto-serviço` → **autosserviço**, `anti-racismo` → **antirracismo**). O resto do Acordo, a acentuação e as armadilhas de vocabulário técnico ficam em [`references/ortografia-ptbr.md`](references/ortografia-ptbr.md), carregado sob demanda.
 
 ---
 
@@ -256,6 +263,9 @@ portugues-tecnico-controlado/
 │   ├── lexico.md                   # evite→use, conectores ambíguos, variante BR, siglas
 │   ├── ortografia-ptbr.md          # Acordo de 1990, armadilhas de TI, o que não é erro
 │   └── ingles.md                   # regras STE-EN, pipeline bilíngue, decalques e falsos amigos
+├── dist/                           # versões portáteis, geradas — não edite à mão
+├── docs/index.html                 # página de instalação, gerada — não edite à mão
+├── tools/build.py                  # gera dist/ e docs/ a partir da skill
 ├── tests/                          # harness de regressão
 ├── loops/                          # goal loops e estado entre sessões
 ├── init.sh                         # roda a verificação

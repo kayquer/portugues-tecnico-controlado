@@ -242,11 +242,106 @@ olhando texto bruto — o `caso-12` medindo qual das três saídas, o `caso-01`
 procurando `APIs` no texto final. **Quando um caso oscila, a saída bruta é o
 primeiro lugar, não o último.**
 
+## Sessão seguinte — posicionamento, léxico e portabilidade (2026-08-12)
+
+Três mudanças que não vieram de um goal loop: vieram de perguntas sobre o que a
+skill parecia ser de fora. Rodadas como três sessões separadas, porque duas delas
+tocam regras diferentes e o `AGENTS.md` proíbe misturar.
+
+### A ortografia não pesava no prompt, pesava na vitrine
+
+A suspeita era que a PTC-8 estivesse dominando a skill. Medido: 23 de 274 linhas
+do `SKILL.md`, 8%. O `ortografia-ptbr.md` carrega sob demanda e custa zero até a
+dúvida aparecer. **O peso estava fora do prompt** — a `description` do frontmatter
+abria citando o Acordo de 1990, e o `README.md` dava uma H3 inteira ao hífen. Quem
+lia isso via um corretor ortográfico, não uma skill de desambiguação.
+
+Consertado onde o problema estava: `description` reescrita liderando por sujeito
+oculto, `-se` e modal; H3 do README rebaixada a parágrafo que diz que a PTC-8 é
+higiene. A regra não mudou de status — continua obrigatória nos três níveis.
+
+A tabela do hífen caiu de 9 para 4 linhas. As 5 que saíram viraram uma frase que
+**nomeia cada caso com o exemplo canônico** e manda abrir o reference. Nomear é o
+que importa: o modelo não carrega um reference cujo conteúdo ele não sabe que
+existe. `caso-01` (`não-conformidade`) e `caso-04` (`infra-estrutura`,
+`micro-serviços`) cobrem o corte — medidos 4× e 3× sem retry, todos PASS.
+
+### `executar` já se contradizia, e ninguém tinha visto
+
+Ampliando o léxico, a checagem de colisão contra o `SKILL.md` achou um caso
+idêntico ao do `apenas`: `SKILL.md` (PTC-4) lista `executar` entre os verbos leves
+proibidos, e três linhas de exemplo acima usa `Execute o script` como a resposta
+✅. Os dois vão no mesmo prompt. **Não foi introduzido por esta sessão** — estava
+lá desde o primeiro commit, e nenhum caso o pegava.
+
+Resolvido pelo mesmo mecanismo do `apenas`: duas linhas no léxico separando o
+sentido. `executar` + nominalização é verbo-suporte; `executar` + objeto concreto
+é o verbo pleno e fica. `caso-14` tem `Execute o script` em `nao-marca`.
+
+**Regra que sai daqui:** antes de acrescentar palavra ao léxico, procure ela no
+`SKILL.md`. Foi o que achou este bug, e é barato — um grep por termo candidato.
+
+### O léxico foi de 29 para 75 linhas, e o que ficou de fora importa
+
+Três tabelas novas: burocratês, gíria de plantão, falsos amigos do inglês.
+
+Uns oito candidatos foram **recusados de propósito**: `oportunamente`, `em tempo
+hábil`, `o quanto antes`, `diversos`, `salvo engano`, `se possível`. Todos são
+hedge ou quantificador vago — território da PTC-3. Botá-los no léxico criaria
+exatamente a colisão de rótulo que custou uma sessão no `caso-01`: a correção sai
+certa e a linha vem etiquetada com a outra regra, e o runner não sabe separar.
+**Léxico só recebe o que é ambiguidade lexical**, não o que já tem regra.
+
+A âncora do `caso-13` é `requisito` porque `requerimento` é o único termo novo com
+alvo único — `escalar`, `checar` e `logar` têm dois alvos legítimos cada, e âncora
+sobre escolha livre vira FLAKY permanente. Medida 5/5 com `PTC_TENTATIVAS=1`.
+
+O `caso-14` também saiu 5/5. Ele é o que paga o item 3 do definition of done:
+`suporta 500 conexões`, `Atualmente`, `Execute o script` e `dados sensíveis` são
+os quatro sentidos legítimos das palavras que as linhas novas proíbem no outro
+sentido. Ampliar léxico sem esse caso teria sido ampliar sem rede.
+
+### Suite
+
+14/14, **zero FLAKY**. A rodada anterior a estas mudanças deu 12/12 com `caso-02` e
+`caso-03` instáveis — os dois que este arquivo já registrava como resíduo. Os dois
+passaram de primeira agora. Uma rodada não absolve instabilidade conhecida, mas
+registrar a melhora é mais honesto que repetir o aviso antigo sem medir.
+
+### Versões portáteis
+
+`tools/build.py` gera cinco bundles e a página de instalação a partir de
+`SKILL.md` + `references/`. Três coisas que só apareceram construindo:
+
+- **A reescrita de caminho não pode ser cega.** No compacto, `ortografia-ptbr.md`
+  e `ingles.md` não entram. Mandar o texto para "a seção X" seria apontar para
+  seção ausente — pior que o caminho quebrado. Reference que entrou vira seção;
+  reference que ficou de fora aponta para a versão completa.
+- **Substituir caminho por artigo gera "estão em a seção".** Numa skill de
+  português controlado essa é a pior vitrine possível. O build contrai.
+- **O bundle do AGENTS.md não pode se chamar `AGENTS.md`.** Codex e opencode leem
+  AGENTS.md aninhado; um dentro de `dist/` mandaria o agente reescrever este repo
+  em português controlado, que é o oposto do que o `AGENTS.md` da raiz manda.
+  Chama-se `ptc-agents.md`; o `curl -o AGENTS.md` resolve no destino.
+
+O compacto ficou em 21 KB, não nos ~7 KB pretendidos: o corpo das 8 regras é o
+piso sem reescrever a skill à mão, e uma terceira versão escrita à mão desviaria
+da fonte no primeiro commit. A página não promete que cabe em qualquer campo.
+
+### Lição
+
+Duas das três perguntas desta sessão eram sobre **percepção**, não sobre
+comportamento — e as duas tinham a resposta fora do arquivo que parecia culpado. A
+ortografia não pesava no prompt, pesava na `description`. O léxico não era pequeno
+por descuido, era pequeno por escopo. **Medir antes de mexer separou o conserto
+real da reação ao sintoma** nos dois casos.
+
 ## Como retomar
 
 ```bash
-./init.sh --cobertura   # onde está o gap (não chama o Claude, é instantâneo)
-./init.sh               # a suite continua verde?
+./init.sh --cobertura                # onde está o gap (não chama o Claude, é instantâneo)
+python3 tools/build.py --verificar   # dist/ e docs/ em dia (também grátis)
+./init.sh                            # a suite continua verde?
 ```
 
 As duas saindo 0 = objetivo atingido. Para reabrir o loop com objetivo novo, escreva outro `goal-*.md` — o de caça a falso positivo adversarial é o próximo candidato natural.
