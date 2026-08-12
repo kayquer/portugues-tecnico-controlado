@@ -37,6 +37,73 @@ Não existe dicionário oficial de português controlado (ver `SKILL.md`, "Por q
 | vale ressaltar / é importante notar | corte | metatexto |
 | basicamente / simplesmente / apenas *(hedge: `é apenas um bug menor`)* | corte | minimizador; muda o fato |
 | apenas / somente *(quantidade: `apenas um teste`)* | mantenha | não é hedge: restringe a quantidade. Cortar muda o fato, e a PTC-5 prescreve `apenas` para o sentido anteposto |
+| executar *(+ nominalização: `executar a validação`)* | o verbo pleno (`valide`) | verbo-suporte (PTC-4) |
+| executar *(+ objeto concreto: `execute o script`)* | mantenha | ali `executar` **é** o verbo pleno. A PTC-4 só proíbe a construção com nominalização |
+
+### Burocratês
+
+Fórmula de ofício que sobreviveu no e-mail corporativo. Some sem levar informação junto.
+
+| Evite | Use | Por quê |
+|---|---|---|
+| vimos por meio desta / venho por meio deste | corte | abertura vazia; a primeira frase já devia ser o assunto |
+| segue anexo / segue em anexo | o relatório está anexado | `segue` esconde quem envia (PTC-1) e a concordância de `anexo` gera dúvida |
+| conforme alinhado / conforme conversado | conforme a decisão de 2026-03-14 | referência sem rastro: ninguém consegue conferir |
+| para conhecimento / para ciência | corte, ou diga a ação esperada | não diz se o leitor precisa fazer algo |
+| no que tange a / no tocante a | sobre | — |
+| a partir do momento em que | quando | — |
+| tendo em vista que | porque | — |
+| de forma a / de modo a | para | — |
+| sem prejuízo de | e também **ou** sem cancelar | adição e ressalva na mesma expressão |
+| dar início a | iniciar | verbo-suporte (PTC-4) |
+| fazer uso de | usar | verbo-suporte (PTC-4) |
+| ter conhecimento de | saber | verbo-suporte (PTC-4) |
+| levar em consideração | considerar | verbo-suporte (PTC-4) |
+| ter como objetivo | servir para | verbo-suporte (PTC-4) |
+| entrar em contato com | contate / ligue para / escreva para | verbo-suporte, e o canal fica implícito |
+| a princípio / em princípio | inicialmente **ou** em tese | dois sentidos opostos: provisório e teórico |
+| aderente a | conforme a / compatível com | anglicismo de `compliant`; em PT `aderente` é o que gruda |
+
+### Gíria de plantão
+
+Vocabulário de conversa de time que não sobrevive a um runbook lido às 3h da manhã.
+
+| Evite | Use | Por quê |
+|---|---|---|
+| rodar | executar *(script)* / funcionar *(serviço)* | dois sentidos |
+| puxar | buscar / baixar / consultar | três operações diferentes |
+| bater *(com)* | conferir com / coincidir com | — |
+| quebrar | falhar / interromper / ficar inválido | três resultados diferentes |
+| estourar | exceder o limite / lançar exceção | dois sentidos |
+| cair | ficar indisponível / falhar / ser encerrado | três sentidos |
+| logar | registrar em log **ou** entrar na conta | dois sentidos opostos na mesma palavra |
+| setar | definir | anglicismo sem ganho |
+| resetar | reiniciar / limpar / restaurar o padrão | três operações diferentes |
+| deployar | implantar / publicar | anglicismo sem ganho |
+| acionar | chamar / notificar / iniciar | três ações diferentes |
+| escalar | aumentar a capacidade **ou** encaminhar ao nível superior | dois sentidos técnicos opostos |
+| otimizar | reduzir / acelerar / diminuir o custo | diga a direção, como em `impactar` |
+| checar | verificar / conferir | anglicismo; e não distingue os dois |
+
+### Falsos amigos do inglês
+
+Aparecem em texto traduzido e em documentação escrita por quem lê em inglês o dia inteiro.
+
+| Evite | Use | Por quê |
+|---|---|---|
+| assumir *(supor)* | supor / presumir | em PT `assumir` é assumir responsabilidade |
+| endereçar *(tratar)* | tratar / resolver | em PT `endereçar` é pôr endereço |
+| suportar *(aceitar)* | aceitar / ser compatível com | em PT `suportar` é aguentar carga — e esse sentido é legítimo |
+| sensível *(significativo)* | significativo / relevante | `dado sensível` é outro sentido e fica |
+| requerimento | requisito | em PT `requerimento` é petição |
+| compreensivo | completo / abrangente | em PT `compreensivo` é quem compreende os outros |
+| efetivo | eficaz | em PT `efetivo` é permanente ou de fato |
+| prover | fornecer / dar | decalque de `provide`; raro em PT-BR fora de tradução |
+| reportar | relatar / informar / registrar | `reportar-se a` é subordinar-se: outro sentido |
+| submeter | enviar | em PT `submeter` é sujeitar alguém a algo |
+| abortar | interromper / cancelar | — |
+| deletar | excluir / apagar | anglicismo sem ganho |
+| atualmente *(tradução de `actually`)* | na verdade | `atualmente` em PT é "no momento": inverte o sentido |
 
 ## Conectores ambíguos
 
@@ -48,6 +115,7 @@ O ASD-STE100 resolve ambiguidade lexical com um dicionário de ~900 palavras. Em
 | `como` *(início de frase)* | causal, comparativo, conforme | `porque` / `conforme` |
 | `desde que` | temporal ou condicional | `se` / `a partir de` |
 | `à medida que` | proporcional ou temporal | `quando` / `conforme` |
+| `na medida em que` | causal, e trocado com `à medida que` o tempo todo | `porque` |
 | `enquanto` | temporal ou adversativo | `enquanto` *(só temporal)* / `mas` |
 | `inclusive` | "até mesmo" ou "aliás" | `até` / `e também` |
 | `sendo que` | nenhuma — é cola | ponto final |
