@@ -1,7 +1,7 @@
 ---
 name: portugues-tecnico-controlado
-description: "Reescreve texto técnico em português do Brasil controlado — sem ambiguidade, com ortografia do Acordo de 1990 e terminologia congelada. Gera par EN/PT quando preciso. Triggers - 'português controlado', 'PTC', 'tira a ambiguidade', 'simplifica esse procedimento', 'reescreve esse runbook', 'versão em EN e PT', 'revisa esse comunicado', 'linguagem controlada'."
-version: 1.0.0
+description: "Reescreve texto técnico em português do Brasil para ter uma leitura só — tira sujeito oculto, -se apassivador, modal que é obrigação e probabilidade ao mesmo tempo, e escopo decidido por vírgula. Congela terminologia, formato de número e data, e ortografia. Gera par EN/PT quando preciso. Triggers - 'português controlado', 'PTC', 'tira a ambiguidade', 'simplifica esse procedimento', 'reescreve esse runbook', 'versão em EN e PT', 'revisa esse comunicado', 'linguagem controlada', 'esse texto tem duas leituras', 'escreve isso pra um agente ler'."
+version: 1.1.0
 ---
 
 <!--
@@ -148,19 +148,16 @@ Aqui o erro não é de estilo, é **dado errado**.
 
 Acordo Ortográfico de 1990, **obrigatório no Brasil desde 2016-01-01** (Decreto 6.583/2008, transição prorrogada até 2015-12-31). Fonte autoritativa: **VOLP da Academia Brasileira de Letras**.
 
-O hífen com prefixo é onde o vocabulário de TI mais erra:
+Quatro situações respondem por quase todo o erro de hífen em texto de TI:
 
 | Situação | Grafia | Exemplo |
 |---|---|---|
 | prefixo em vogal + **r/s** | junta e **dobra** a consoante | `microsserviço`, `autosserviço`, `antirracismo` |
 | prefixo em vogal + vogal **diferente** | junta | `infraestrutura`, `extraescolar`, `multiusuário` |
-| prefixo em vogal + vogal **igual** ou **h** | hífen | `anti-inflamatório`, `anti-higiênico`, `super-homem` |
 | `co-`, `re-` | juntam **sempre** | `coautor`, `coprocessador`, `reescrever`, `reindexação` |
 | `pré-`, `pós-`, `pró-` tônicos | hífen **sempre** | `pré-requisito`, `pós-processamento` |
-| prefixo em consoante + **mesma** consoante | hífen | `inter-relação`, `hiper-resistente` |
-| prefixo em consoante + outra letra | junta | `superusuário`, `interoperabilidade` |
-| `sub-` + b/h/r | hífen | `sub-rotina`, `sub-região` |
-| `não` + substantivo | **sem** hífen (mudou) | `não conformidade` |
+
+Fora dessas quatro, **não deduza** — as demais situações estão em `references/ortografia-ptbr.md`, "Hífen com prefixo": vogal igual ou `h` depois do prefixo (`anti-inflamatório`, `super-homem`), prefixo terminado em consoante (`inter-relação`, mas `superusuário`), `sub-` + b/h/r (`sub-rotina`), e `não` + substantivo, que perdeu o hífen com o Acordo (`não conformidade`).
 
 Também: trema abolido (`frequência`, `sequência`, `bilíngue`); ditongo aberto em paroxítona sem acento (`ideia`, `assembleia`, `heroico`); sem circunflexo em `oo`/`ee` (`voo`, `leem`, `creem`, `veem`); diferenciais abolidos (`para`, `pelo`, `polo`, `pera`) mas **mantidos** `pôr` e `pôde`.
 
