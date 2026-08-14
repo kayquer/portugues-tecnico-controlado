@@ -1,19 +1,17 @@
-# loop-state — goal-cobertura
+# loop-state
 
-Estado entre rodadas do loop de `goal-cobertura.md`. Uma linha por rodada.
-Atualize **ao fim de cada rodada**, antes de começar a próxima.
+Estado entre rodadas dos goal loops. Atualize **ao fim de cada rodada**, antes de
+começar a próxima. As seções estão em ordem cronológica; a última é a atual.
 
 ## Estado atual
 
-- **Objetivo:** `loops/goal-cobertura.md`
-- **Cobertura:** positivo 8/8 ✓ · contra-teste 8/8 ✓ — **matriz fechada**
-- **Rodadas:** 6 de 12
-- **Suite:** 12 casos
-- **Status:** objetivo atingido em 2026-08-02; harness auditado e dois achados fechados em 2026-08-03
-- **Suite:** 12/12, exit 0, 2 `FLAKY` (`caso-02`, `caso-03`)
-- **Abertos:** nenhum achado de regra. Ver "resíduo" ao fim.
+- **Objetivo aberto:** `loops/goal-falso-positivo.md` — contra-teste adversarial
+- **Adversarial:** 0/8 — nenhuma rodada ainda
+- **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
+- **Suite:** 14 casos · 14/14, exit 0, zero `FLAKY` (2026-08-12)
+- **Abertos:** nenhum achado de regra
 
-## Rodadas
+## Rodadas — goal-cobertura
 
 | # | Regra | Caso criado | Resultado |
 |---|---|---|---|
@@ -336,12 +334,64 @@ ortografia não pesava no prompt, pesava na `description`. O léxico não era pe
 por descuido, era pequeno por escopo. **Medir antes de mexer separou o conserto
 real da reação ao sintoma** nos dois casos.
 
+## Sessão seguinte — harness do loop adversarial (2026-08-14)
+
+Sem rodada de loop: só o gate e o roteamento de modelo que o
+`goal-falso-positivo.md` precisa para existir. Nenhum caso novo, nenhuma regra
+tocada.
+
+### O gate não podia contar contra-teste antigo
+
+A matriz está 8/8 e 8/8, então "tem contra-teste" já não distingue nada. Pior:
+PTC-6 tem 4 contra-testes e sairia "pronta" sem uma linha adversarial. O critério
+mecânico passou a ser **origem do caso**, marcada no nome do arquivo
+(`caso-adv-*`) — zero mudança no parser, e `PTC_ADVERSARIAL=1` filtra a coluna.
+
+Estado inicial: **0/8 adversarial** contra 8/8 contra-teste na mesma árvore. As
+duas saírem diferentes é a verificação do filtro; iguais significaria gate que
+não gateia.
+
+### `ESCALOU` — o passo manual que virava achado inventado
+
+O `AGENTS.md` mandava rodar com opus antes de concluir quebra da skill, porque
+modelo menor às vezes aplica a correção e não cita a regra. Era passo manual, e
+esquecê-lo custa mais neste loop que nos anteriores: aqui um `FAIL` de rótulo
+vira **achado de falso positivo registrado neste arquivo**, ou seja, ruído com
+cara de evidência.
+
+Automatizado como estado próprio, não como retentativa silenciosa — mesma razão
+do `FLAKY`. Só escala depois das 3 tentativas e **só se houve resposta para
+avaliar**: escalar depois de timeout gasta o modelo caro em nada.
+
+Custo em rodada verde: zero. Só toca opus no que já falhou três vezes.
+
+### Haiku não entrou como default
+
+`PTC_MODELO=haiku` sempre funcionou sem código. Medido de passagem: haiku passou
+o `caso-01` inteiro (8/8 regras, 1ª tentativa). Um caso não é medição, e o risco
+não é prosa pior — é modelo menor **citar menos regra na tabela**, que é
+exatamente o que `avaliar()` lê. Fica como possibilidade medida pela metade.
+
+### O harness ganhou check próprio
+
+`ESCALOU` é um branch que **nenhum caso de teste alcança**: reproduzi-lo de
+verdade depende do modelo menor falhar, que é o que não se controla — a tentativa
+com haiku no `caso-01` saiu PASS. A decisão saiu de dentro do `main` para
+`veredito()`, e `tests/test_runner.py` a exercita com `rodar` dublado. 7 checks,
+grátis, rodando no `./init.sh` junto do `build.py --verificar`.
+
+Os dois branches novos foram verificados por mutação — escalar depois de timeout
+e filtro adversarial inerte, ambos pegos. Check que não falha quando o código
+quebra não verifica nada, e este repo já gastou uma sessão inteira nessa lição.
+
 ## Como retomar
 
 ```bash
-./init.sh --cobertura                # onde está o gap (não chama o Claude, é instantâneo)
-python3 tools/build.py --verificar   # dist/ e docs/ em dia (também grátis)
-./init.sh                            # a suite continua verde?
+PTC_ADVERSARIAL=1 ./init.sh --cobertura   # o gap aberto: 0/8 (grátis)
+./init.sh --cobertura                      # matriz antiga: 8/8 e 8/8 (grátis)
+python3 tests/test_runner.py               # checks do runner (grátis)
+./init.sh                                  # a suite continua verde?
 ```
 
-As duas saindo 0 = objetivo atingido. Para reabrir o loop com objetivo novo, escreva outro `goal-*.md` — o de caça a falso positivo adversarial é o próximo candidato natural.
+O loop aberto é `loops/goal-falso-positivo.md` — rode com `/loop` sem intervalo.
+O `goal-cobertura.md` está fechado; não reabra.

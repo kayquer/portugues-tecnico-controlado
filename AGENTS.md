@@ -84,21 +84,35 @@ Ao acrescentar um destino de instalação, é a página que muda: `tools/index.t
 ## Verificação
 
 ```bash
-./init.sh                          # roda tudo (checa dist/ antes; ver "Versões portáteis")
+./init.sh                          # roda tudo (checa dist/ e o runner antes; ver abaixo)
 ./init.sh caso-01                  # um caso só (match por substring)
 ./init.sh --cobertura              # matriz regra × (positivo, contra-teste) — não chama o Claude
 python3 tools/build.py             # regenera dist/ e docs/index.html
 python3 tools/build.py --verificar # só confere se estão em dia — não chama o Claude
-PTC_MODELO=opus ./init.sh          # modelo diferente
+python3 tests/test_runner.py       # checks do próprio runner — não chama o Claude
+PTC_MODELO=opus ./init.sh          # modelo diferente (default: sonnet)
+PTC_MODELO_ESCALA= ./init.sh       # desliga a repetição em opus (ver "ESCALOU")
 PTC_TENTATIVAS=1 ./init.sh         # sem retry (para medir flakiness)
 PTC_TIMEOUT=600 ./init.sh          # timeout por chamada (default: 300s)
+PTC_ADVERSARIAL=1 ./init.sh --cobertura   # matriz só com contra-teste caso-adv-*
 ```
+
+`tests/test_runner.py` cobre as duas decisões que os casos **não** alcançam: os
+quatro estados de `veredito()` e o filtro do `PTC_ADVERSARIAL`. Reproduzir um
+`ESCALOU` de verdade depende do modelo menor falhar, que é justamente o que não
+se controla — ali `rodar` vai dublado. Roda em `./init.sh` sem argumento, junto
+do `build.py --verificar`, pela mesma razão: é grátis.
 
 ## Loops
 
-`loops/goal-cobertura.md` é um goal loop no formato do [learn-harness-engineering](https://github.com/walkinglabs/learn-harness-engineering) (lecture-13). Rode com `/loop` sem intervalo — o modelo se auto-pauta e para no critério do próprio arquivo.
+Goal loops no formato do [learn-harness-engineering](https://github.com/walkinglabs/learn-harness-engineering) (lecture-13). Rode com `/loop` sem intervalo — o modelo se auto-pauta e para no critério do próprio arquivo.
 
-O critério de parada é **mecânico**: `./init.sh --cobertura` sai 0 quando toda regra tem caso positivo e contra-teste. Sem julgamento, sem "acho que já deu".
+| Loop | Critério mecânico | Estado |
+|---|---|---|
+| `loops/goal-cobertura.md` | `./init.sh --cobertura` sai 0 | fechado (8/8, 8/8) |
+| `loops/goal-falso-positivo.md` | `PTC_ADVERSARIAL=1 ./init.sh --cobertura` sai 0 | aberto |
+
+Sem julgamento, sem "acho que já deu". O segundo existe porque o primeiro fechou com contra-testes escritos **junto com a regra** — todos testam a leitura legítima óbvia, e nenhum testa português correto que *se parece* com a violação. Por isso `PTC_ADVERSARIAL` não conta os antigos: PTC-6 tem 4 contra-testes e sairia "pronta" sem uma linha nova.
 
 Estado entre rodadas em `loops/loop-state.md`. Para um objetivo novo, escreva outro `goal-*.md` — cada um precisa de objetivo, verificação executável, condição de parada e restrições.
 
@@ -120,7 +134,16 @@ O runner repete cada caso até `PTC_TENTATIVAS` (3) antes de reprovar, porque a 
 |---|---|
 | `PASS` | passou de primeira |
 | `FLAKY` | passou numa retentativa — conta como ok, mas aparece destacado |
-| `FAIL` | falhou as 3 tentativas — quebra real |
+| `ESCALOU` | falhou as 3 em `PTC_MODELO`, passou em `PTC_MODELO_ESCALA` (opus) |
+| `FAIL` | falhou as 3 tentativas **e** a escalada — quebra real |
+
+`ESCALOU` automatiza o que antes era passo manual desta seção: modelo menor às
+vezes aplica a correção e não cita a regra na tabela, e a asserção lê a tabela.
+Esquecer de conferir isso à mão faz um problema de rótulo passar por quebra da
+skill — e num loop de caça a falso positivo, vira achado inventado no
+`loop-state`. **`ESCALOU` não é falso positivo da regra**; o diagnóstico é a
+linha "colisão de rótulo" da tabela abaixo. Depois de timeout não escala:
+sem resposta para avaliar, a chamada cara não decide nada.
 
 **Flaky recorrente merece investigação**, não tolerância. Aponta para uma de três coisas — e a linha de detalhe abaixo do `FAIL` diz qual:
 
@@ -150,7 +173,7 @@ Cada caso é **até `PTC_TENTATIVAS` (3) chamadas** ao Claude, e a suite tem 12 
 
 Durante o desenvolvimento, prefira `./init.sh <caso>` e deixe a suite inteira para o fim. `--cobertura` é grátis (não chama a API).
 
-**Se um caso falhar, rode com `PTC_MODELO=opus` antes de concluir que a skill quebrou.** Modelo menor às vezes não cita a regra na tabela mesmo tendo aplicado a correção.
+**Isto agora é automático:** o runner repete em opus antes de dar `FAIL`, e o caso sai como `ESCALOU`. Só chama o modelo caro no que já falhou três vezes, então em rodada verde o custo é zero. Para medir sem essa rede — comparando modelos, por exemplo — use `PTC_MODELO_ESCALA=`.
 
 ## Formato de caso
 
@@ -217,9 +240,12 @@ references/
   ingles.md               # regras STE-EN, pipeline bilíngue, decalques
 tests/
   verify.py               # runner (Python 3 stdlib, sem dependências)
+  test_runner.py          # checks do runner — grátis, roda no init.sh
   casos/*.md              # casos de regressão
+  casos/caso-adv-*.md     # contra-teste adversarial (ver goal-falso-positivo)
 loops/
   goal-cobertura.md       # goal loop: matriz regra × (positivo, contra-teste)
+  goal-falso-positivo.md  # goal loop: contra-teste adversarial por regra
   loop-state.md           # estado entre rodadas + achados abertos
 tools/
   build.py                # gera dist/ e docs/ — ver "Versões portáteis"

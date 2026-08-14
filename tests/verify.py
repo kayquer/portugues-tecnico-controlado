@@ -19,8 +19,17 @@ import sys
 from pathlib import Path
 
 MODELO = os.environ.get("PTC_MODELO", "sonnet")
+# Automatiza o passo que o AGENTS.md manda fazer à mão: um caso que falha em
+# modelo menor pode ter sido corrigido sem a regra ter sido citada. Concluir
+# quebra da skill sem checar isso é o erro caro. Vazio desliga.
+MODELO_ESCALA = os.environ.get("PTC_MODELO_ESCALA", "opus").strip()
 TIMEOUT = int(os.environ.get("PTC_TIMEOUT", "300"))
 TENTATIVAS = int(os.environ.get("PTC_TENTATIVAS", "3"))
+# Contra-teste escrito junto com a regra testa a leitura legítima óbvia. O
+# adversarial testa português correto que *se parece* com a violação — outra
+# coisa. Ver loops/goal-falso-positivo.md.
+ADVERSARIAL = os.environ.get("PTC_ADVERSARIAL", "") not in ("", "0")
+PREFIXO_ADV = "caso-adv"
 AQUI = Path(__file__).resolve().parent
 REPO = AQUI.parent
 
@@ -111,17 +120,25 @@ def cobertura(casos):
     É o critério de parada mecânico do goal loop em `loops/goal-cobertura.md`:
     uma regra só está coberta quando existe caso que a faz disparar E caso que
     prova que ela não dispara onde não deve.
+
+    Com `PTC_ADVERSARIAL=1`, a segunda coluna só conta `caso-adv-*` — critério
+    de `loops/goal-falso-positivo.md`. Contar contra-teste total não serviria
+    ali: a matriz já está fechada, e regra com 4 contra-testes escritos junto
+    com ela sairia "pronta" sem uma linha adversarial.
     """
+    rotulo = "adversarial" if ADVERSARIAL else "contra-teste"
     pos = {n: [] for n in REGRAS}
     neg = {n: [] for n in REGRAS}
     for caminho in casos:
         c = parse_caso(caminho)
         for n in c["espera"]:
             pos[n].append(c["nome"])
+        if ADVERSARIAL and not c["nome"].startswith(PREFIXO_ADV):
+            continue
         for n in c["contra_teste"]:
             neg[n].append(c["nome"])
 
-    print(f"{'regra':<8}{'positivo':<14}contra-teste")
+    print(f"{'regra':<8}{'positivo':<14}{rotulo}")
     for n in REGRAS:
         m = lambda v: f"{VERDE}✓{RESET} ({len(v)})" if v else f"{VERMELHO}✗{RESET}     "
         print(f"PTC-{n:<4}{m(pos[n]):<23}{m(neg[n])}")
@@ -131,12 +148,12 @@ def cobertura(casos):
     falta_neg = [n for n in REGRAS if not neg[n]]
     print(f"\npositivo:     {total - len(falta_pos)}/{total}"
           + (f"  faltam {', '.join('PTC-' + n for n in falta_pos)}" if falta_pos else "  ✓"))
-    print(f"contra-teste: {total - len(falta_neg)}/{total}"
+    print(f"{rotulo + ':':<14}{total - len(falta_neg)}/{total}"
           + (f"  faltam {', '.join('PTC-' + n for n in falta_neg)}" if falta_neg else "  ✓"))
     return 1 if (falta_pos or falta_neg) else 0
 
 
-def rodar(skill, caso):
+def rodar(skill, caso, modelo=MODELO):
     # Os três parâmetros do Passo 0 da skill. `destinatario` e `bilingue` só
     # mudam o comportamento se chegarem ao prompt — antes eram lidos do
     # cabeçalho e descartados, e o caso bilíngue passava só porque a própria
@@ -159,7 +176,7 @@ def rodar(skill, caso):
     # do SKILL.md, que o CLI interpretaria como flag desconhecida.
     try:
         r = subprocess.run(
-            ["claude", "-p", "--model", MODELO],
+            ["claude", "-p", "--model", modelo],
             input=prompt, capture_output=True, text=True, timeout=TIMEOUT,
         )
     except FileNotFoundError:
@@ -212,6 +229,44 @@ def avaliar(caso, saida):
     return (not (faltou or proibidos or ausentes)), faltou, proibidos, ausentes
 
 
+def veredito(skill, caso):
+    """Roda o caso até decidir. Devolve (estado, tentativa, faltou, proibidos, ausentes).
+
+    Separado de `main` porque é a única lógica de decisão do runner e é a que
+    não dá para verificar com chamada real: reproduzir um `ESCALOU` de verdade
+    depende do modelo menor falhar, que é justamente o que não se controla.
+    `tests/test_runner.py` a exercita com `rodar` dublado.
+    """
+    faltou = proibidos = ausentes = []
+
+    # Output de LLM oscila: um caso pode falhar numa rodada e passar na
+    # seguinte. Sem retry, a suite acusa regressão que não existe — e pior,
+    # cada rodada acusa um caso diferente. Repetir separa quebra de ruído.
+    for tentativa in range(1, TENTATIVAS + 1):
+        saida = rodar(skill, caso)
+        if saida is None:
+            ok, faltou, proibidos, ausentes = False, [], [], []
+            continue
+        ok, faltou, proibidos, ausentes = avaliar(caso, saida)
+        if ok:
+            return ("PASS" if tentativa == 1 else "FLAKY"), tentativa, [], [], []
+
+    # Modelo menor às vezes aplica a correção e não cita a regra na tabela, e a
+    # asserção lê a tabela. Antes isto era passo manual do AGENTS.md, e
+    # esquecê-lo faz um FAIL de rótulo passar por quebra da skill.
+    # Só escala se houve resposta para avaliar: depois de timeout, escalar
+    # gasta o modelo caro em nada.
+    if (MODELO_ESCALA and MODELO_ESCALA != MODELO
+            and (faltou or proibidos or ausentes)):
+        saida = rodar(skill, caso, MODELO_ESCALA)
+        if saida is not None:
+            ok, faltou, proibidos, ausentes = avaliar(caso, saida)
+            if ok:
+                return "ESCALOU", tentativa, [], [], []
+
+    return "FAIL", tentativa, faltou, proibidos, ausentes
+
+
 def main():
     casos = sorted((AQUI / "casos").glob("*.md"))
     if not casos:
@@ -229,27 +284,20 @@ def main():
     print(f"{CINZA}skill: {len(skill.splitlines())} linhas · "
           f"modelo: {MODELO} · {len(casos)} caso(s){RESET}\n")
 
-    falhas = instaveis = 0
+    falhas = instaveis = escalados = 0
     for caminho in casos:
         caso = parse_caso(caminho)
         print(f"{caso['nome']:.<40} ", end="", flush=True)
 
-        # Output de LLM oscila: um caso pode falhar numa rodada e passar na
-        # seguinte. Sem retry, a suite acusa regressão que não existe — e pior,
-        # cada rodada acusa um caso diferente. Repetir separa quebra de ruído.
-        for tentativa in range(1, TENTATIVAS + 1):
-            saida = rodar(skill, caso)
-            if saida is None:
-                ok, faltou, proibidos, ausentes = False, [], [], []
-                continue
-            ok, faltou, proibidos, ausentes = avaliar(caso, saida)
-            if ok:
-                break
+        estado, tentativa, faltou, proibidos, ausentes = veredito(skill, caso)
 
         n = len(caso["espera"])
-        if ok and tentativa == 1:
+        if estado == "ESCALOU":
+            escalados += 1
+            print(f"{AMARELO}ESCALOU{RESET} (falhou em {MODELO}, passou em {MODELO_ESCALA})")
+        elif estado == "PASS":
             print(f"{VERDE}PASS{RESET}  ({n}/{n} regras)")
-        elif ok:
+        elif estado == "FLAKY":
             instaveis += 1
             print(f"{AMARELO}FLAKY{RESET} (passou na {tentativa}ª de {TENTATIVAS})")
         else:
@@ -271,10 +319,18 @@ def main():
 
     total = len(casos)
     print(f"\n{total - falhas}/{total} casos ok", end="")
-    print(f" · {AMARELO}{instaveis} instável(is){RESET}" if instaveis else "")
+    extra = []
+    if instaveis:
+        extra.append(f"{instaveis} instável(is)")
+    if escalados:
+        extra.append(f"{escalados} escalado(s)")
+    print(f" · {AMARELO}{' · '.join(extra)}{RESET}" if extra else "")
     if instaveis:
         print(f"{CINZA}flaky recorrente = asserção frágil ou regra ambígua. "
               f"Ver AGENTS.md.{RESET}")
+    if escalados:
+        print(f"{CINZA}escalado = {MODELO} não citou a regra que aplicou. "
+              f"É rótulo, não quebra — mas olhe a saída bruta.{RESET}")
     return 1 if falhas else 0
 
 

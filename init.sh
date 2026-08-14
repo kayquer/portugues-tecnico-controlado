@@ -7,6 +7,8 @@
 #   ./init.sh --cobertura        matriz de cobertura (não chama a API)
 #   PTC_MODELO=opus ./init.sh    outro modelo (default: sonnet)
 #   PTC_TENTATIVAS=1 ./init.sh   sem retry (para medir instabilidade)
+#   PTC_MODELO_ESCALA=           não repete em opus quando o caso falha
+#   PTC_ADVERSARIAL=1 ./init.sh --cobertura   só conta contra-teste caso-adv-*
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -21,6 +23,7 @@ command -v python3 >/dev/null || { echo "falta: python3"; falta=1; }
 # testada, e isso ninguém percebe olhando o verde dos casos.
 if [ $# -eq 0 ]; then
   python3 tools/build.py --verificar || exit 1
+  python3 tests/test_runner.py     || exit 1
 fi
 
 exec python3 tests/verify.py "$@"
