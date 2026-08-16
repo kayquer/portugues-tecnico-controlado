@@ -268,6 +268,7 @@ portugues-tecnico-controlado/
 ├── tools/build.py                  # gera dist/ e docs/ a partir da skill
 ├── tests/                          # harness de regressão
 ├── loops/                          # goal loops e estado entre sessões
+├── requirements.txt                # dependência do harness — a skill não usa
 ├── init.sh                         # roda a verificação
 └── AGENTS.md                       # como editar a skill sem quebrá-la
 ```
@@ -284,23 +285,25 @@ portugues-tecnico-controlado/
 ./init.sh                     # roda todos os casos de regressão
 ./init.sh caso-01             # um caso só
 ./init.sh --cobertura         # matriz de cobertura, não chama a API, é instantâneo
+./init.sh --metricas          # legibilidade antes/depois, sem gatear (calibra os limiares)
 PTC_MODELO=opus ./init.sh     # outro modelo (default: sonnet)
 PTC_TENTATIVAS=1 ./init.sh    # sem retry, para medir instabilidade
 ```
 
 O runner concatena `SKILL.md` + `references/*.md` **deste repo** e manda para `claude -p`. Ele testa o arquivo que você acabou de editar, não a cópia instalada em `~/.claude/skills/`.
 
-Como output de LLM não é determinístico, ele não compara texto. Verifica três coisas:
+Como output de LLM não é determinístico, ele não compara texto. Verifica quatro coisas:
 
 - **cobertura**: toda regra de `espera:` apareceu na tabela de violações
 - **falso positivo**: todo termo de `nao-marca:` sobreviveu intacto no texto reescrito
 - **âncora**: todo termo de `deve-conter:` apareceu na saída
+- **legibilidade**: o texto final passa dos limiares `flesch-min:`/`pal-frase-max:` do caso
 
-O segundo é o que impede a skill de virar um corretor que "conserta" português correto. O terceiro cobre o que não tem número de regra próprio: a flag `destinatário: agente` e o pipeline bilíngue, que pela tabela de violações seriam indistinguíveis de um caso comum.
+O segundo é o que impede a skill de virar um corretor que "conserta" português correto. O terceiro cobre o que não tem número de regra próprio: a flag `destinatário: agente` e o pipeline bilíngue, que pela tabela de violações seriam indistinguíveis de um caso comum. O quarto mede a prosa, que os outros três não olham — a skill podia devolver reescrita correta e ilegível com todos os casos verdes. É o Flesch adaptado ao PT-BR (Martins et al. 1996) calculado sobre os contadores do [textstat](https://github.com/textstat/textstat); a fórmula é do projeto porque o textstat não tem português, e cada limiar é medido, nunca escolhido a olho.
 
 Cada regra precisa de **dois** casos: um que a faz disparar e um contra-teste que prova que ela não dispara onde não deve. `./init.sh --cobertura` monta essa matriz e sai 0 quando ela fecha.
 
-Fluxo completo, definition of done e clean-state checklist em [`AGENTS.md`](AGENTS.md). Requisitos: [Claude Code](https://claude.com/claude-code) e Python 3.
+Fluxo completo, definition of done e clean-state checklist em [`AGENTS.md`](AGENTS.md). Requisitos do harness: [Claude Code](https://claude.com/claude-code), Python 3 e `pip install -r requirements.txt` (textstat, para a métrica de legibilidade). **Usar a skill não precisa de nada disso** — ela é Markdown.
 
 ---
 

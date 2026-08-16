@@ -8,7 +8,10 @@ começar a próxima. As seções estão em ordem cronológica; a última é a at
 - **Objetivo aberto:** `loops/goal-falso-positivo.md` — contra-teste adversarial
 - **Adversarial:** 0/8 — nenhuma rodada ainda
 - **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
-- **Suite:** 14 casos · 14/14, exit 0, zero `FLAKY` (2026-08-12)
+- **Suite:** 14 casos · 14/14, exit 0, zero `FLAKY` (2026-08-16)
+- **Legibilidade:** 4ª asserção, 3 casos com limiar calibrado — `caso-01`
+  `pal-frase-max: 11`, `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12`
+  (medidos 5× em 2026-08-16; `caso-03` e `caso-12` reprovados na medição)
 - **Abertos:** nenhum achado de regra
 
 ## Rodadas — goal-cobertura
@@ -383,6 +386,91 @@ grátis, rodando no `./init.sh` junto do `build.py --verificar`.
 Os dois branches novos foram verificados por mutação — escalar depois de timeout
 e filtro adversarial inerte, ambos pegos. Check que não falha quando o código
 quebra não verifica nada, e este repo já gastou uma sessão inteira nessa lição.
+
+## Sessão seguinte — a 4ª asserção: legibilidade medida (2026-08-16)
+
+O harness verificava **qual regra disparou** e **quais termos sobreviveram**, nunca
+o texto. O `AGENTS.md` admitia isso numa frase ("a asserção é sobre qual regra
+disparou, não sobre a qualidade da prosa"). Demonstrado em vez de suposto: uma
+saída forjada com a tabela citando as 8 regras e o texto final
+`banana front-end banana usuário banana` **passa** no `caso-01` de hoje. Com
+`flesch-min: 55`, reprova.
+
+### A fórmula é nossa porque o textstat não tem português
+
+`LANG_CONFIGS` do textstat 0.7.12 tem `en, de, es, fr, it, nl, pl, ru, hu`.
+`set_lang("pt_BR")` **não levanta erro** — cai nas constantes do inglês, e
+`flesch_reading_ease` devolve número calibrado para inglês sobre texto português.
+Do textstat só se usa o que vale em PT: `syllable_count` (via Pyphen, que tem
+`hyph_pt_BR.dic`), `lexicon_count`, `sentence_count`. A fórmula é o Flesch
+adaptado ao PT-BR de Martins et al. 1996 (USP São Carlos), em
+`tests/legibilidade.py`.
+
+Primeira dependência do repo. A skill continua Markdown puro.
+
+### Duas armadilhas de contagem, uma específica deste repo
+
+`count_sentences` racha em **qualquer** `.`: `1.5 GB` vira duas frases. Aqui isso
+é grave porque a PTC-7 troca `1.5` por `1,5` — entrada e texto final sairiam com
+contagens diferentes por um motivo que não é legibilidade. `normaliza()` neutraliza
+`(?<=\d)\.(?=\d)` **dos dois lados**; `teste_decimal_nao_racha_frase` trava isso.
+
+A segunda: fragmento de ≤2 palavras é descartado e o retorno é `max(1, ...)`, então
+a guarda de divisão por zero é sobre palavras, não frases.
+
+### A faixa do `flesch-min` era `[0, 100]` e estava errada
+
+Pego por `teste_gate_metrica_reprova_e_aprova`, que testa um **par** — o gate
+reprova texto ruim *e* aprova texto bom. Só a primeira metade teria ficado verde
+com a faixa quebrada. Medido: burocratês 35, `caso-01` cru 52, reescrita PTC boa
+acima de 100, período único de palavras longas −79. A escala de Martins é nominal
+e transborda nas duas pontas; o teto real da fórmula é 163,22. Faixa corrigida
+para `[-100, 160]`, com os números no comentário para ninguém "consertar" de volta.
+
+### Calibração — 25 medições, e 2 dos 3 palpites caíram
+
+`--metricas` 5× nos 5 candidatos. O palpite escrito no plano era 01, 03, 13.
+
+| Caso | flesch do texto final, 5 rodadas | pior | entrada | resultado |
+|---|---|---|---|---|
+| 01 | 55,9 · 63,3 · 66,3 · 60,8 · 67,0 | 55,9 | 51,6 | `pal-frase-max: 11` |
+| 03 | 32,9 · 37,6 · 37,6 · 32,9 · 32,9 | 32,9 | 35,3 | **sem limiar** |
+| 11 | 73,2 nas cinco | 73,2 | 52,0 | `flesch-min: 68` |
+| 12 | — · 72,3 · 72,3 · 72,3 · 72,3 | 72,3 | 72,3 | **sem limiar** |
+| 13 | 80,3 · 76,4 · 71,5 · 79,0 · 74,1 | 71,5 | 73,5 | `pal-frase-max: 12` |
+
+**`caso-03` reprovado:** nível `leve`, o flesch *cai* em 3 de 5 rodadas e
+palavras/frase fica 9,0 nas cinco — idêntico à entrada. A métrica não se move;
+um limiar aqui asseraria a entrada.
+
+**`caso-12` reprovado:** a saída é numericamente igual à entrada em 4 rodadas, e a
+rodada 1 **não produziu seção "Texto final"**. Um limiar teria dado FAIL 1/5 por
+formato, não por legibilidade — é para isso que a regra dos 5/5 existe.
+
+**`caso-11` foi o inverso do previsto:** texto curto, previsão de ruído, e deu
+variância **zero** — 73,2 nas cinco, 21 pontos acima da entrada.
+
+Onde o limiar entrou em `pal-frase-max`, foi porque lá ele assere *melhora*: no
+`caso-01` a entrada tem 13,1 palavras/frase e o teto é 11, então uma saída que não
+mexesse no texto reprovaria. `flesch-min` calibrado costuma cair **abaixo** da
+entrada e vale como piso contra reescrita inchada, não como prova de melhora.
+
+### O que a métrica não vê
+
+Repetição — "O operador deve" 6× no `caso-01` é prosa robótica e o Flesch
+**premia** isso. Fidelidade — o modelo completou um objeto elíptico com
+"o andamento da restauração" e declarou em "Mantido de propósito"; nenhum número
+confere se a inferência estava certa. Ela é piso contra inchaço, não juiz de
+qualidade. Estilo e fidelidade continuam por conta de `nao-marca` com termo
+concreto.
+
+### Falha de métrica não escala
+
+`ESCALOU` significa colisão de rótulo. Texto difícil de ler não é isso, e o opus
+reescrever melhor não desmente regressão nenhuma. O guard é
+`escalavel = [f for f in falhas if f[0] != "métrica"]` em `veredito()`, com o par
+`teste_metrica_nao_escala` / `teste_metrica_escala_com_rotulo` provando que ele
+filtra por rótulo, não por "o caso tem métrica".
 
 ## Como retomar
 

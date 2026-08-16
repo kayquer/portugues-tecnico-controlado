@@ -4,6 +4,7 @@
 nivel: estrito
 espera: PTC-1, PTC-2, PTC-3, PTC-4, PTC-5, PTC-6, PTC-7, PTC-8
 nao-marca: front-end, usuário
+pal-frase-max: 11
 
 contra-teste: PTC-6, PTC-8
 

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Check do próprio runner. Não chama a API — roda em `./init.sh` antes dos casos.
 
-Verifica as duas decisões do `verify.py` que os casos de teste **não** alcançam:
+Verifica as decisões do `verify.py` que os casos de teste **não** alcançam:
 
   veredito()   PASS/FLAKY/ESCALOU/FAIL — reproduzir um ESCALOU de verdade
                depende do modelo menor falhar, que é o que não se controla
   cobertura()  o filtro `PTC_ADVERSARIAL`, que decide o critério de parada
                de `loops/goal-falso-positivo.md`
+  métrica      o gate de legibilidade: que ele reprova, que ele aprova, que
+               não mede a saída inteira, e que **não escala** para o opus
 
 Uso: python3 tests/test_runner.py
 """
@@ -16,19 +18,27 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import legibilidade  # noqa: E402
 import verify  # noqa: E402
 
 
 def caso_falso(**extra):
     c = {"nome": "caso-x", "nivel": "estrito", "destinatario": "", "bilingue": False,
          "espera": ["1"], "nao_marca": [], "contra_teste": [], "deve_conter": [],
-         "entrada": "texto"}
+         "flesch_min": None, "pal_frase_max": None, "entrada": "texto"}
     c.update(extra)
     return c
 
 
 VERDE = "**Texto final:**\nok\n\n| PTC-1 | a | b |"
 VERMELHO = "**Texto final:**\nok\n\nsem tabela"
+
+# Uma frase longa, de palavras longas: flesch baixo, palavras/frase alto. Serve
+# aos dois lados do gate — reprova limiar exigente, passa limiar frouxo.
+DIFICIL = ("**Texto final:**\n> A implementação da infraestrutura de "
+           "monitoramento dos microsserviços possibilita a identificação "
+           "antecipada de indisponibilidades sistêmicas recorrentes.\n\n"
+           "| PTC-1 | a | b |")
 
 
 def dublar(respostas):
@@ -75,9 +85,9 @@ def teste_escalou_e_falhou():
     verify.TENTATIVAS = 1
     verify.MODELO_ESCALA = "opus"
     dublar([VERMELHO, VERMELHO])
-    estado, _, faltou, *_ = verify.veredito("skill", caso_falso())
+    estado, _, falhas = verify.veredito("skill", caso_falso())
     assert estado == "FAIL", estado
-    assert faltou == ["1"], faltou
+    assert ("faltou", "PTC-1") in falhas, falhas
 
 
 def teste_timeout_nao_escala():
@@ -97,6 +107,91 @@ def teste_escala_desligada():
     estado, *_ = verify.veredito("skill", caso_falso())
     assert estado == "FAIL", estado
     assert chamados == [verify.MODELO], chamados
+
+
+def teste_metrica_nao_escala():
+    """O check mais importante: o modo de falha é invisível.
+
+    Falha só de métrica que escalasse gastaria opus em silêncio e etiquetaria um
+    FAIL legítimo de legibilidade como colisão de rótulo — que é o significado
+    documentado de ESCALOU. O sintoma na tela seria idêntico.
+    """
+    verify.TENTATIVAS = 2
+    verify.MODELO_ESCALA = "opus"
+    chamados = dublar([DIFICIL, DIFICIL])
+    estado, _, falhas = verify.veredito("skill", caso_falso(flesch_min=90))
+    assert estado == "FAIL", estado
+    assert "opus" not in chamados, chamados
+    assert all(r == "métrica" for r, _ in falhas), falhas
+
+
+def teste_metrica_escala_com_rotulo():
+    """O espelho: falha mista escala. O guard é sobre o rótulo, não sobre
+    'este caso tem métrica'."""
+    verify.TENTATIVAS = 1
+    verify.MODELO_ESCALA = "opus"
+    # `sem tabela` não cita PTC-1 → falha de rótulo E de métrica; o opus devolve
+    # texto fácil com a tabela.
+    ruim = VERMELHO.replace("ok", "A implementação da infraestrutura possibilita "
+                                  "a identificação antecipada de indisponibilidades.")
+    chamados = dublar([ruim, VERDE])
+    estado, _, _ = verify.veredito("skill", caso_falso(flesch_min=90))
+    assert estado == "ESCALOU", estado
+    assert "opus" in chamados, chamados
+
+
+def teste_normaliza_igual_nos_dois_lados():
+    """A comparabilidade inteira mora aqui: entrada crua e texto final em
+    blockquote têm de medir igual, senão o antes/depois compara coisas
+    diferentes e o limiar calibrado não significa nada."""
+    cru = "O agendador valida o token.\nEle envia o relatório ao servidor."
+    saida = ("**Texto final:**\n> O agendador valida o token.\n"
+             "> Ele envia o relatório ao servidor.\n")
+    assert legibilidade.medir(cru) == legibilidade.medir(verify.texto_final(saida))
+
+
+def teste_decimal_nao_racha_frase():
+    """`count_sentences` racha em qualquer `.`, então `1.5 GB` seriam duas
+    frases — e a PTC-7 troca `1.5` por `1,5`, o que mudaria a contagem entre
+    entrada e texto final por um motivo que não é legibilidade."""
+    ponto = legibilidade.medir("O disco tem 1.5 GB livres e o pacote é o 3.11.")
+    virgula = legibilidade.medir("O disco tem 1,5 GB livres e o pacote é o 3,11.")
+    assert ponto.frases == virgula.frases == 1, (ponto, virgula)
+
+
+def teste_metrica_sem_texto_final():
+    """Sem a seção final não há o que medir. Cair para a saída inteira mediria a
+    tabela de violações — número que passa ou reprova por acidente."""
+    sem_secao = "| PTC-1 | a | b |\n\nnão emiti texto final"
+    ok, falhas = verify.avaliar(caso_falso(flesch_min=50), sem_secao)
+    assert not ok
+    assert falhas == [("métrica", "não achei o 'Texto final:' na saída — "
+                                  "não dá para medir")], falhas
+
+
+def teste_gate_metrica_reprova_e_aprova():
+    """O par. Só o lado que reprova deixaria passar um gate travado em vermelho."""
+    exigente, _ = verify.avaliar(caso_falso(flesch_min=90, pal_frase_max=5), DIFICIL)
+    frouxo, falhas = verify.avaliar(caso_falso(flesch_min=-100, pal_frase_max=99), DIFICIL)
+    assert not exigente
+    assert frouxo, falhas
+
+
+def teste_medida_curta():
+    """Texto sem palavra devolve None — não ZeroDivisionError, não 0.0."""
+    assert legibilidade.medir("") is None
+    assert legibilidade.medir("\n\n| a | b |\n") is None
+
+
+def teste_flesch_ordena():
+    """Ordenação, não valor absoluto: pega fórmula invertida e sinal trocado sem
+    pinar a silabação do Pyphen num número mágico."""
+    facil = legibilidade.medir("O disco está cheio. Apague um arquivo. Tente de novo.")
+    dificil = legibilidade.medir(
+        "A implementação da infraestrutura de monitoramento dos microsserviços "
+        "possibilita a identificação antecipada de indisponibilidades sistêmicas.")
+    assert facil.flesch > dificil.flesch, (facil, dificil)
+    assert facil.pal_frase < dificil.pal_frase, (facil, dificil)
 
 
 def teste_filtro_adversarial():

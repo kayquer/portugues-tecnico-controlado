@@ -1,0 +1,7 @@
+# Dependência do **harness**, não da skill. `SKILL.md` + `references/` continuam
+# Markdown puro — instalar a skill não precisa de nada disto.
+#
+# Pinado, não `>=`: cada `flesch-min`/`pal-frase-max` dos casos é um número
+# calibrado sobre a silabação do Pyphen desta versão. Um bump menor move
+# `syllable_count` e invalida todo limiar medido — em silêncio.
+textstat==0.7.12

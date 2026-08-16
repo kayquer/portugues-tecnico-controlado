@@ -25,6 +25,7 @@ nivel: estrito
 destinatario: agente
 espera:
 deve-conter: O agente envia o pacote
+flesch-min: 68
 
 ## entrada
 O agente lê o manifesto. Ele valida a assinatura do pacote. Pacote enviado ao servidor.

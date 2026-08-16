@@ -61,6 +61,8 @@ Se a mudança toca mais de uma regra, quebre em sessões e rode `./init.sh` entr
 | Tabela de níveis | PTC-1, PTC-7 e PTC-8 são obrigatórias nos três níveis. Relaxar qualquer uma em `leve` desmonta o desenho — ortografia errada não fica menos errada em texto informal. |
 | Seção "O que NÃO é erro" (`ortografia-ptbr.md`) | É o que impede a skill de virar corretor que conserta português correto. |
 | `dist/` e `docs/index.html` | São **gerados**. Edite `SKILL.md`/`references/` e rode `tools/build.py`. Editar o destino é a mesma classe de erro de corrigir um `❌`: some no próximo build, sem aviso. |
+| `flesch-min` / `pal-frase-max` já calibrados | O número saiu de 5 medições registradas em `loop-state.md`. Afrouxar para "fazer o teste passar" é desligar o gate sem removê-lo — e a próxima sessão acha que ele ainda gateia. |
+| A versão pinada em `requirements.txt` | Cada limiar é calibrado sobre a silabação do Pyphen daquela versão do textstat. Um bump menor move `syllable_count` e invalida todo limiar medido, em silêncio. |
 
 ## Versões portáteis
 
@@ -84,9 +86,11 @@ Ao acrescentar um destino de instalação, é a página que muda: `tools/index.t
 ## Verificação
 
 ```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # textstat, uma vez
 ./init.sh                          # roda tudo (checa dist/ e o runner antes; ver abaixo)
 ./init.sh caso-01                  # um caso só (match por substring)
 ./init.sh --cobertura              # matriz regra × (positivo, contra-teste) — não chama o Claude
+./init.sh --metricas               # legibilidade antes/depois, sem gatear — 1 chamada por caso
 python3 tools/build.py             # regenera dist/ e docs/index.html
 python3 tools/build.py --verificar # só confere se estão em dia — não chama o Claude
 python3 tests/test_runner.py       # checks do próprio runner — não chama o Claude
@@ -118,13 +122,22 @@ Estado entre rodadas em `loops/loop-state.md`. Para um objetivo novo, escreva ou
 
 O runner concatena `SKILL.md` + `references/*.md` **deste repo** e manda para `claude -p`. Ele testa o arquivo que você acabou de editar, não a cópia instalada em `~/.claude/skills/`.
 
-Ele **não compara texto** — output de LLM não é determinístico. Verifica três coisas:
+Ele **não compara texto** — output de LLM não é determinístico. Verifica quatro coisas:
 
 - **cobertura** — toda regra de `espera:` apareceu na tabela de violações
 - **falso positivo** — todo termo de `nao-marca:` sobreviveu intacto no texto final
 - **âncora** — todo termo de `deve-conter:` apareceu na saída
+- **legibilidade** — o texto final passa dos limiares `flesch-min:`/`pal-frase-max:` do caso
 
 Regra extra não reprova o caso.
+
+A quarta existe porque as outras três medem **qual regra disparou**, nunca se a prosa
+melhorou: a skill podia produzir reescrita correta-e-ilegível com os 14 casos verdes. Ela é
+`tests/legibilidade.py` — Flesch adaptado ao PT-BR (Martins et al. 1996, USP São Carlos) sobre
+os contadores do textstat. **A fórmula é nossa de propósito:** o textstat não tem português, e
+`set_lang("pt_BR")` não dá erro — cai nas constantes do inglês em silêncio. Do textstat só se
+usa o que vale em PT: `syllable_count` (via Pyphen, que tem `hyph_pt_BR.dic`), `lexicon_count`
+e `sentence_count`. Não reabra isso sem ler a docstring do módulo.
 
 ### FLAKY não é PASS silencioso
 
@@ -145,7 +158,14 @@ skill — e num loop de caça a falso positivo, vira achado inventado no
 linha "colisão de rótulo" da tabela abaixo. Depois de timeout não escala:
 sem resposta para avaliar, a chamada cara não decide nada.
 
-**Flaky recorrente merece investigação**, não tolerância. Aponta para uma de três coisas — e a linha de detalhe abaixo do `FAIL` diz qual:
+**Falha só de métrica também não escala.** `ESCALOU` quer dizer uma coisa só —
+o modelo menor aplicou a correção e não citou a regra. Texto difícil de ler não
+é colisão de rótulo, e o opus reescrever melhor não desmente regressão nenhuma:
+escalar ali gastaria o modelo caro e ainda etiquetaria um FAIL legítimo de
+legibilidade como problema de citação. Falha **mista** (rótulo + métrica) escala
+normalmente, e a métrica é reavaliada na saída do opus junto com o resto.
+
+**Flaky recorrente merece investigação**, não tolerância. Aponta para uma das causas abaixo — e a linha de detalhe impressa abaixo do `FAIL` diz qual:
 
 | Detalhe impresso | Causa | Conserto |
 |---|---|---|
@@ -153,6 +173,9 @@ sem resposta para avaliar, a chamada cara não decide nada.
 | `faltou: PTC-N` | **regra ambígua** — o modelo hesita porque a regra não decide o caso | no `SKILL.md`/`references`, **não** no teste |
 | `faltou: PTC-N` | **colisão de rótulo** — a correção sai certa e a linha é etiquetada com outra regra | dizer no `SKILL.md` onde a regra **não** mora, não só onde mora |
 | `não apareceu: <termo>` | **âncora frágil** — o `deve-conter` fixa uma escolha que a skill não é obrigada a fazer | desambiguar a **entrada**, não encurtar a âncora |
+| `métrica: flesch X < Y` | **limiar chutado**, ou regressão real de legibilidade | rode `--metricas` 5×; se nunca fecha 5/5, o limiar estava chutado — baixe ou tire a chave |
+| `métrica: não achei o 'Texto final:'` | **formato** — a skill mudou o rótulo da seção final | conserte `INICIO_TEXTO_FINAL` ou o formato de saída da skill, **nunca** o limiar |
+| `métrica: texto curto demais` | **caso curto** — não há palavra que sustente a medida | tire o limiar deste caso |
 | `sem resposta do modelo` | **infra** — timeout ou erro da API | nenhum; rode de novo |
 
 **Âncora frágil, caso real:** `caso-11` entrava com `Pacote enviado às 14h30` e ancorava `agente enviou` — 3/5. Com marca de tempo, `O agente envia` e `O agente enviou` são as duas corretas, porque a entrada não diz se aquilo é log de evento passado ou comportamento recorrente. Trocado por `ao servidor`, que força a leitura de ação em presente: 5/5. O conserto foi na entrada; encurtar a âncora teria escondido a ambiguidade em vez de removê-la.
@@ -172,6 +195,9 @@ Casos com histórico de instabilidade estão registrados em `loops/loop-state.md
 Cada caso é **até `PTC_TENTATIVAS` (3) chamadas** ao Claude, e a suite tem 12 casos — 12 chamadas quando tudo passa de primeira, mais uma por retentativa. O default é `sonnet`: Opus a cada rodada fica caro, e a asserção é sobre qual regra disparou, não sobre a qualidade da prosa.
 
 Durante o desenvolvimento, prefira `./init.sh <caso>` e deixe a suite inteira para o fim. `--cobertura` é grátis (não chama a API).
+
+`--metricas` **não** é grátis, ao contrário de `--cobertura`: 1 chamada por caso, sem retry. E o
+procedimento de calibração pede 5 rodadas — orce isso antes de sair medindo a suite inteira.
 
 **Isto agora é automático:** o runner repete em opus antes de dar `FAIL`, e o caso sai como `ESCALOU`. Só chama o modelo caro no que já falhou três vezes, então em rodada verde o custo é zero. Para medir sem essa rede — comparando modelos, por exemplo — use `PTC_MODELO_ESCALA=`.
 
@@ -196,6 +222,8 @@ nao-marca: front-end, usuário
 | `contra-teste` | regras que este caso prova não dispararem. Só alimenta `--cobertura` |
 | `destinatario` | `agente` ativa a flag do `SKILL.md` sobre `estrito` |
 | `bilingue` | `sim` pede o par EN/PT |
+| `flesch-min` | piso do Flesch-PT no **texto final** — medido, nunca chutado |
+| `pal-frase-max` | teto de palavras por frase no **texto final** |
 
 O parser corta a saída antes da seção "mantido de propósito" para checar `nao-marca` — ali a skill cita a regra que *pegaria* o trecho, sem tê-lo corrigido, e isso acusaria falso positivo.
 
@@ -206,6 +234,27 @@ O parser corta a saída antes da seção "mantido de propósito" para checar `na
 Quando o comportamento testado **não tem número PTC próprio** e a asserção por regra citada não o distingue de outro caso. Os três comportamentos da flag `destinatário: agente` são isso: `caso-11` é indistinguível de um PTC-1 comum pela tabela de violações, e só `deve-conter` prova que a flag mudou alguma coisa.
 
 **Âncora se mede, não se chuta.** Rode o caso 5× com `PTC_TENTATIVAS=1` e só aceite âncora 5/5. Uma que passa 3/5 vira `FLAKY` permanente e some no ruído. Ver `loop-state.md` para as duas âncoras que foram reprovadas e por quê.
+
+### O limiar se mede, não se chuta
+
+Mesma doutrina da âncora, e a tentação aqui é maior porque limiar é um número e número parece
+objetivo. Não é: ele é uma aposta sobre a oscilação do modelo até ser medido.
+
+1. `PTC_TENTATIVAS=1 ./init.sh --metricas <caso>`, **5 vezes**.
+2. Pegue o **pior** "texto final" das 5 — menor flesch, maior palavras/frase.
+3. Limiar = pior menos a margem: flesch **−5**, palavras/frase **+2**. Arredonde para número humano.
+4. Escreva a chave e rode `PTC_TENTATIVAS=1 ./init.sh <caso>` 5×. **Só aceite 5/5.** Menos que isso o limiar é moeda ao ar: baixe ou tire a chave.
+5. Registre o número medido e a data em `loops/loop-state.md`, como as âncoras já são.
+
+Ordem de grandeza medida neste repo: comunicado burocrático 35, o `caso-01` cru 52, reescrita
+PTC boa acima de 100. A escala de Martins não é limitada a `[0, 100]` — período único de
+palavras longas dá negativo, e isso é sinal, não defeito.
+
+**Contra-teste de `espera:` vazia não leva limiar.** O comportamento correto ali é o texto sair
+praticamente inalterado, então o número assere uma propriedade da **entrada** — que é fixa e
+escrita por nós. Passa no dia 1 e continua passando faça a skill o que fizer, inclusive se ela
+quebrar. É o caso verde que não verifica nada. Se algo se assere num contra-teste é *teto* de
+mudança, e teto já é o que `nao-marca` faz, com termo concreto em vez de número agregado.
 
 ### O parser recusa caso inválido
 
@@ -239,7 +288,8 @@ references/
   ortografia-ptbr.md      # Acordo de 1990, armadilhas de TI, o que não é erro
   ingles.md               # regras STE-EN, pipeline bilíngue, decalques
 tests/
-  verify.py               # runner (Python 3 stdlib, sem dependências)
+  verify.py               # runner
+  legibilidade.py         # Flesch-PT (Martins 1996) sobre os contadores do textstat
   test_runner.py          # checks do runner — grátis, roda no init.sh
   casos/*.md              # casos de regressão
   casos/caso-adv-*.md     # contra-teste adversarial (ver goal-falso-positivo)
@@ -253,10 +303,17 @@ tools/
 dist/                     # GERADO: bundles para agentes fora do Claude Code
 docs/index.html           # GERADO: página de instalação (GitHub Pages)
 init.sh                   # checa pré-requisitos e roda o verify
+requirements.txt          # textstat — só o harness; instalar a skill não precisa de nada
 AGENTS.md                 # este arquivo
 ```
 
 Só `SKILL.md` e `references/*.md` vão para o prompt. O resto é harness ou saída gerada.
+
+O harness deixou de ser stdlib puro quando a métrica entrou: `python3 -m venv .venv &&
+.venv/bin/pip install -r requirements.txt`, uma vez. O `init.sh` prefere `.venv/bin/python3`
+quando ele existe e recusa rodar sem o textstat — falhar em 200 ms vale mais que descobrir a
+dependência ausente depois de 14 chamadas de API. **A skill em si continua sem dependência
+nenhuma:** ela é Markdown.
 
 ## Origem das decisões
 
