@@ -6,7 +6,9 @@ começar a próxima. As seções estão em ordem cronológica; a última é a at
 ## Estado atual
 
 - **Objetivo aberto:** `loops/goal-falso-positivo.md` — contra-teste adversarial
-- **Adversarial:** 1/8 após a rodada 1 (PTC-4) — faltam PTC-1, 2, 3, 5, 6, 7, 8
+- **Adversarial:** 3/8 após as rodadas 1-3 (PTC-4, PTC-2, PTC-3) — faltam PTC-1, 5, 6, 7, 8
+- **Abertos (harness, não regra):** `caso-01` e `caso-14` saíram `FLAKY` na suite
+  da rodada 2, depois de 4 suites limpas no mesmo dia. Em medição.
 - **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
 - **Suite:** 14 casos · 14/14, exit 0, zero `FLAKY` (2026-08-16)
 - **Legibilidade:** 4ª asserção, 3 casos com limiar calibrado — `caso-01`
@@ -517,6 +519,69 @@ mais frouxa — ela falha num estado que a antiga nem alcançava.
 Lição, que é a mesma do `goal-cobertura`: check escrito para um estado futuro
 não é check, é intenção. Ele só vira verificação na primeira vez que o estado
 chega — e é aí que ele cobra a fatura, no meio de outra tarefa.
+
+### Rodada 2 — PTC-2, relativa restritiva longa (2026-08-16)
+
+Adversarial 1/8 → **2/8**. `caso-adv-2-relativa-restritiva-longa.md`, verde de
+primeira. Sem achado.
+
+O `caso-06` já era contra-teste da PTC-2, mas com relativa de duas palavras
+(`que falharam`) — curta demais para tentar alguém a cortar. O adversarial usa
+uma restritiva de dez palavras: quanto mais longa, mais ela *parece* aposto e
+mais convida à vírgula. E a vírgula ali não é estilo — `arquivos que o operador
+enviou` são alguns arquivos, `arquivos, que o operador enviou,` são todos.
+
+**A âncora foi escolhida para morrer no erro certo.** `nao-marca` é
+`arquivos que o operador`, não `que o operador enviou`: a segunda sobreviveria
+intacta à inserção da vírgula, que é exatamente o falso positivo procurado.
+Âncora que sobrevive ao erro que ela deveria pegar é âncora inerte — mesma
+família do check morto da rodada 1.
+
+Descartei entrada com `enquanto`: duas proposições numa frase fazem a PTC-2
+dividir com razão, e a asserção viraria moeda ao ar em vez de decidir.
+
+### Rodada 3 — PTC-3, `talvez` prescrito × "zero hedge" (2026-08-16)
+
+Adversarial 2/8 → **3/8**. `caso-adv-3-talvez-e-pode-permissao.md`, **5/5** com
+`PTC_TENTATIVAS=1`. Sem achado — mas o alvo era outro tipo de coisa.
+
+Este caso não foi atrás de um terreno da regra e sim de uma **contradição interna
+suspeita**, com a mesma assinatura do achado do `apenas`:
+
+```
+SKILL.md:95   "Zero hedge."
+SKILL.md:93   probabilidade: proibido usar modal — dê número ou escreva `talvez`
+```
+
+`talvez` prescrito numa linha, condenado na outra, e as duas concatenadas no mesmo
+prompt. O `apenas` ficou invisível meses exatamente assim, e só apareceu porque o
+modelo decidia diferente a cada rodada — foi por isso que aqui um PASS de primeira
+não bastou.
+
+**Resultado: a contradição é textual mas não está mordendo.** 5/5 preservou
+`talvez`. Isso não é motivo para reescrever nada no `SKILL.md` — a divisão que o
+`apenas` recebeu (`lexico.md:38-39`) foi paga por evidência de oscilação, e aqui
+não há. O valor da rodada é que agora **existe asserção atrás da linha**: se uma
+edição futura pender a balança, o caso pega. Antes, nada pegava.
+
+Se a skill cortasse `talvez`, as duas saídas seriam achado: trocar por modal viola
+a própria célula que proíbe modal para probabilidade, e inventar número inventa
+fato. Por isso a âncora é `talvez` sozinho — as duas matam o substring.
+
+### Observação aberta — `caso-01` e `caso-14` instáveis na suite da rodada 2
+
+A suite saiu 16/16 e **2 instáveis**: `caso-01` passou na 3ª de 3, `caso-14` na 2ª
+de 3. Nas quatro suites anteriores do mesmo dia, zero flaky.
+
+`caso-01` é o que ganhou `pal-frase-max: 11` nesta sessão, então a primeira
+hipótese é limiar apertado demais — apesar de ele ter fechado 5/5 na confirmação
+da calibração. Em medição, 5 amostras não distinguem 0% de ~15% de falha.
+
+A linha `FLAKY` **não diz qual asserção falhou** — o runner só imprime detalhe em
+`FAIL`. Medindo 6× com `PTC_TENTATIVAS=1` para forçar o detalhe. Resultado abaixo
+quando fechar. Se for a métrica, o limiar baixa ou sai (AGENTS.md, "O limiar se
+mede, não se chuta"); se for `faltou: PTC-N`, é o histórico do `caso-01` e não tem
+relação com esta sessão.
 
 ## Como retomar
 
