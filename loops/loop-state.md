@@ -6,7 +6,7 @@ começar a próxima. As seções estão em ordem cronológica; a última é a at
 ## Estado atual
 
 - **Objetivo aberto:** `loops/goal-falso-positivo.md` — contra-teste adversarial
-- **Adversarial:** 0/8 — nenhuma rodada ainda
+- **Adversarial:** 1/8 após a rodada 1 (PTC-4) — faltam PTC-1, 2, 3, 5, 6, 7, 8
 - **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
 - **Suite:** 14 casos · 14/14, exit 0, zero `FLAKY` (2026-08-16)
 - **Legibilidade:** 4ª asserção, 3 casos com limiar calibrado — `caso-01`
@@ -471,6 +471,52 @@ reescrever melhor não desmente regressão nenhuma. O guard é
 `escalavel = [f for f in falhas if f[0] != "métrica"]` em `veredito()`, com o par
 `teste_metrica_nao_escala` / `teste_metrica_escala_com_rotulo` provando que ele
 filtra por rótulo, não por "o caso tem métrica".
+
+## Rodadas — goal-falso-positivo
+
+### Rodada 1 — PTC-4, `executar` com objeto concreto (2026-08-16)
+
+Adversarial 0/8 → **1/8**. `caso-adv-4-executar-objeto-concreto.md`, verde de
+primeira, sem medição extra.
+
+A escolha não foi pela ordem da matriz e sim por lacuna: `lexico.md:40-41` decide
+que `executar a validação` é verbo-suporte e `execute o script` é verbo pleno —
+distinção que saiu do conserto da contradição do `executar` (de05802) e ficou
+**sem asserção nenhuma atrás**, duas linhas de tabela em prosa. O `caso-10` cobre
+nominalização como *sujeito*; ninguém cobria o gatilho superficial literal da
+regra, que é verbo leve + substantivo.
+
+Entrada: três `executar` com objeto concreto (`script`, `testes`, `script`).
+Descartei `plano de reversão` de propósito — ali `reversão` **é** nominalização e
+a linha ficaria discutível em vez de decisiva.
+
+Sem achado na skill. A PTC-4 respeitou a fronteira nas duas leituras.
+
+**Mas a rodada achou um bug no harness**, e o modo de falha é o interessante:
+`teste_filtro_adversarial` afirmava `codigo_on == (0 if adv else 1)` — ou seja,
+"existe ao menos um `caso-adv` ⇒ a matriz adversarial está fechada". Isso só vale
+com as 8 regras cobertas. Enquanto `caso-adv-*` não existia, o ramo `0 if adv`
+era **código morto**: a asserção nunca tinha rodado nesse lado. O primeiro caso
+adversarial da história do repo derrubou a suite inteira sem nenhuma regressão
+real.
+
+Consertado para a invariante certa — a matriz fecha quando **todas** as 8 regras
+têm `caso-adv-*` declarando-as em `contra-teste`:
+
+```python
+regras_adv = {r for c in casos if c.stem.startswith(verify.PREFIXO_ADV)
+              for r in verify.parse_caso(c)["contra_teste"]}
+fechada = len(regras_adv) == len(verify.REGRAS)
+assert codigo_on == (0 if fechada else 1), (codigo_on, sorted(regras_adv))
+```
+
+Verificado por mutação: forçando `cobertura()` a devolver 0 com só a PTC-4
+coberta, a asserção recusa. A versão nova é **mais estrita** que a antiga, não
+mais frouxa — ela falha num estado que a antiga nem alcançava.
+
+Lição, que é a mesma do `goal-cobertura`: check escrito para um estado futuro
+não é check, é intenção. Ele só vira verificação na primeira vez que o estado
+chega — e é aí que ele cobra a fatura, no meio de outra tarefa.
 
 ## Como retomar
 

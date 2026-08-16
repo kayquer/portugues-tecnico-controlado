@@ -212,8 +212,15 @@ def teste_filtro_adversarial():
     assert "contra-teste:" in texto_off and "adversarial:" in texto_on
     # Se o filtro não filtrar, os dois saem idênticos e o gate não gateia nada.
     assert texto_off != texto_on, "PTC_ADVERSARIAL não mudou a matriz"
-    adv = [c for c in casos if c.stem.startswith(verify.PREFIXO_ADV)]
-    assert codigo_on == (0 if adv else 1), (codigo_on, len(adv))
+    # A matriz adversarial só fecha quando **todas** as 8 regras têm um
+    # `caso-adv-*` declarando-as em `contra-teste` — não quando existe um caso
+    # adversarial qualquer. A versão anterior assumia a segunda coisa e era
+    # código morto enquanto `caso-adv-*` não existia; o primeiro caso escrito
+    # (PTC-4, 2026-08-16) derrubou a suite inteira sem nenhuma regressão real.
+    regras_adv = {r for c in casos if c.stem.startswith(verify.PREFIXO_ADV)
+                  for r in verify.parse_caso(c)["contra_teste"]}
+    fechada = len(regras_adv) == len(verify.REGRAS)
+    assert codigo_on == (0 if fechada else 1), (codigo_on, sorted(regras_adv))
     assert codigo_off == 0, "a matriz normal deveria estar fechada"
 
 
