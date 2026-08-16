@@ -6,9 +6,13 @@ começar a próxima. As seções estão em ordem cronológica; a última é a at
 ## Estado atual
 
 - **Objetivo aberto:** `loops/goal-falso-positivo.md` — contra-teste adversarial
-- **Adversarial:** 3/8 após as rodadas 1-3 (PTC-4, PTC-2, PTC-3) — faltam PTC-1, 5, 6, 7, 8
-- **Abertos (harness, não regra):** `caso-01` e `caso-14` saíram `FLAKY` na suite
-  da rodada 2, depois de 4 suites limpas no mesmo dia. Em medição.
+- **Adversarial:** 4/8 após as rodadas 1-4 (PTC-4, PTC-2, PTC-3, PTC-7) — faltam PTC-1, 5, 6, 8
+- **Legibilidade:** `caso-01` `flesch-min: 50` (corrigido — o `pal-frase-max: 11`
+  original falhava ~28%), `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12`
+  (em observação, margem fina)
+- **Abertos:** `caso-14` saiu `FLAKY` uma vez na suite da rodada 2 — uma
+  ocorrência não é achado, mas se repetir, meça. O `caso-01` foi explicado e
+  corrigido.
 - **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
 - **Suite:** 14 casos · 14/14, exit 0, zero `FLAKY` (2026-08-16)
 - **Legibilidade:** 4ª asserção, 3 casos com limiar calibrado — `caso-01`
@@ -578,10 +582,68 @@ hipótese é limiar apertado demais — apesar de ele ter fechado 5/5 na confirm
 da calibração. Em medição, 5 amostras não distinguem 0% de ~15% de falha.
 
 A linha `FLAKY` **não diz qual asserção falhou** — o runner só imprime detalhe em
-`FAIL`. Medindo 6× com `PTC_TENTATIVAS=1` para forçar o detalhe. Resultado abaixo
-quando fechar. Se for a métrica, o limiar baixa ou sai (AGENTS.md, "O limiar se
-mede, não se chuta"); se for `faltou: PTC-N`, é o histórico do `caso-01` e não tem
-relação com esta sessão.
+`FAIL`. Isso é lacuna do harness, não desta rodada: quem investiga flaky tem de
+remedir com `PTC_TENTATIVAS=1` só para descobrir qual das quatro asserções caiu.
+
+### Resolvido — o limiar do `caso-01` era meu, e estava errado
+
+Não precisou de rodada nova: a resposta já estava nos dados do mesmo dia.
+
+| Origem da medição | pal/frase da saída |
+|---|---|
+| calibração (5×) | 9,1 · 8,0 · 9,0 · 7,6 · 8,6 |
+| fumaça do `--metricas` | **11,4** |
+| execução avulsa (`mostrar.py`) | **12,1** |
+
+**2 de 7 estouram `pal-frase-max: 11`** — ~28% de falha, que explica um `FLAKY`
+passando na 3ª de 3. O erro tem duas camadas e a segunda é a que importa: as 5
+amostras da calibração caíram agrupadas entre 7,6 e 9,1 por sorte, e as duas
+discordantes **já estavam medidas** — foram ignoradas por não terem saído do laço
+de calibração. Isso é escolher os dados que confirmam o limiar.
+
+Conserto: `pal-frase-max: 11` → **`flesch-min: 50`**. 0 de 7 fora, margem 5,9, e
+ainda reprova o texto-lixo (12,1) que motivou a métrica. O que ele perde: **não
+assere melhora** — a entrada é 51,6, então reescrita nula passaria. É o teto real
+deste caso: a saída varia de 7,6 a 12,1 pal/frase contra entrada de 13,1, então as
+distribuições encostam e não cabe margem e asserção de melhora ao mesmo tempo.
+
+O `AGENTS.md` ganhou três passos que faltavam no procedimento: olhar o
+**espalhamento** e não só o pior valor; cruzar com **toda** medição avulsa do
+caso; e reconhecer quando não existe limiar bom.
+
+### Remedição de `caso-11` e `caso-13` (7 amostras cada)
+
+- **`caso-11`** — flesch **73,2 nas sete**, variância zero. `flesch-min: 68` com
+  margem 5,2. Sólido, mantém.
+- **`caso-13`** — p/f 4,6 · 6,0 · 8,2 · 8,2 · 8,2 · 10,7 · 10,7. `pal-frase-max: 12`
+  com margem 1,3 contra espalhamento de 6,1 — mesmo perfil de risco do `caso-01`.
+  **Mantido em observação:** 0 de 7 violações, e no `caso-01` havia 2 na mão. Se
+  ele aparecer `FLAKY` numa suite, tire a chave em vez de remedir.
+
+Nota de método: as 3 últimas de 5 remedições voltaram vazias — erro de API por
+limite de taxa depois de muitas chamadas seguidas. Vale orçar isso: uma sessão que
+mede muito bate no teto e as medições perdidas parecem dado, não falha.
+
+### Rodada 4 — PTC-7, identificadores de rede (2026-08-16)
+
+Adversarial 3/8 → **4/8**. `caso-adv-7-identificadores-de-rede.md`, verde de
+primeira. Sem achado.
+
+O `caso-09` cobria o ponto que separa versão de decimal (`v1.5`, `3.11`,
+`1,5 GB`). Sobrou o resto do terreno que o goal file lista e ninguém testou:
+porta `:8080`, CIDR `10.0.0.0/24`, semver de três campos e hash curto.
+
+`1.10.2` é o item perigoso, e está na entrada ao lado de `1.2` de propósito:
+trocar o ponto por vírgula não só quebra o identificador como **inverte a
+ordenação** — `1.10.2` é maior que `1.2` em semver e menor em decimal. Se a
+PTC-7 disparar ali, o erro tem consequência visível na própria frase, não só na
+grafia.
+
+Nota que vale para quem for pôr limiar depois: este é o pior caso possível para a
+métrica. `normaliza()` troca ponto entre dígitos por vírgula para não rachar
+frase, então ela mede `1,10,2`. Não afeta asserção nenhuma aqui — as âncoras são
+substring do texto cru —, mas **não ponha `flesch-min` nem `pal-frase-max` neste
+caso**.
 
 ## Como retomar
 

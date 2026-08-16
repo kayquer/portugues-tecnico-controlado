@@ -242,9 +242,19 @@ objetivo. Não é: ele é uma aposta sobre a oscilação do modelo até ser medi
 
 1. `PTC_TENTATIVAS=1 ./init.sh --metricas <caso>`, **5 vezes**.
 2. Pegue o **pior** "texto final" das 5 — menor flesch, maior palavras/frase.
-3. Limiar = pior menos a margem: flesch **−5**, palavras/frase **+2**. Arredonde para número humano.
-4. Escreva a chave e rode `PTC_TENTATIVAS=1 ./init.sh <caso>` 5×. **Só aceite 5/5.** Menos que isso o limiar é moeda ao ar: baixe ou tire a chave.
-5. Registre o número medido e a data em `loops/loop-state.md`, como as âncoras já são.
+3. **Olhe o espalhamento, não só o pior.** Se `max − min` for maior que a margem que você ia usar, 5 amostras não viram a cauda: meça mais 5 ou não ponha limiar. Foi aqui que o `caso-01` custou uma sessão — ver abaixo.
+4. Limiar = pior menos a margem: flesch **−5**, palavras/frase **+2**. Arredonde para número humano.
+5. **Cruze com toda medição que você já tem do caso**, inclusive as avulsas — uma rodada de fumaça, um `--metricas` solto. Elas contam como amostra. Ignorá-las porque não saíram do "laço de calibração" é escolher os dados que confirmam o limiar.
+6. Escreva a chave e rode `PTC_TENTATIVAS=1 ./init.sh <caso>` 5×. **Só aceite 5/5.** Menos que isso o limiar é moeda ao ar: baixe ou tire a chave.
+7. Registre o número medido, o espalhamento e a data em `loops/loop-state.md`, como as âncoras já são.
+
+**Se a saída encosta na entrada, não há limiar bom.** O `caso-01` tem entrada de
+13,1 palavras/frase e saída medida entre 7,6 e 12,1: não cabe margem e asserção
+de melhora ao mesmo tempo. Ali o limiar só pode ser **piso contra lixo** — um
+`flesch-min` abaixo da legibilidade da entrada, que pega reescrita destruída e
+não pega reescrita preguiçosa. Aceite o limite ou não ponha a chave; um limiar
+apertado que oscila é pior que nenhum, porque vira `FLAKY` permanente e some no
+ruído junto com os flaky que importam.
 
 Ordem de grandeza medida neste repo: comunicado burocrático 35, o `caso-01` cru 52, reescrita
 PTC boa acima de 100. A escala de Martins não é limitada a `[0, 100]` — período único de
