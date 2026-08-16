@@ -13,6 +13,7 @@
 nivel: estrito
 espera: PTC-6
 deve-conter: requisito
+pal-frase-max: 12
 
 ## entrada
 O time vai puxar os dados do painel e endereçar as divergências. O requerimento de latência não foi atendido, então resete o cache e escale para o plantão. Antes disso, logue no painel e cheque os últimos registros.

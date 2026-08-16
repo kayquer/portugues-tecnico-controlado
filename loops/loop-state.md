@@ -1,19 +1,24 @@
-# loop-state — goal-cobertura
+# loop-state
 
-Estado entre rodadas do loop de `goal-cobertura.md`. Uma linha por rodada.
-Atualize **ao fim de cada rodada**, antes de começar a próxima.
+Estado entre rodadas dos goal loops. Atualize **ao fim de cada rodada**, antes de
+começar a próxima. As seções estão em ordem cronológica; a última é a atual.
 
 ## Estado atual
 
-- **Objetivo:** `loops/goal-cobertura.md`
-- **Cobertura:** positivo 8/8 ✓ · contra-teste 8/8 ✓ — **matriz fechada**
-- **Rodadas:** 6 de 12
-- **Suite:** 12 casos
-- **Status:** objetivo atingido em 2026-08-02; harness auditado e dois achados fechados em 2026-08-03
-- **Suite:** 12/12, exit 0, 2 `FLAKY` (`caso-02`, `caso-03`)
-- **Abertos:** nenhum achado de regra. Ver "resíduo" ao fim.
+- **Objetivo aberto:** `loops/goal-falso-positivo.md` — contra-teste adversarial
+- **Adversarial:** 5/8 após as rodadas 1-5 (PTC-4, PTC-2, PTC-3, PTC-7, PTC-8) —
+  faltam PTC-1, PTC-5, PTC-6
+- **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
+- **Suite:** 19 casos (2026-08-16)
+- **Legibilidade:** 4ª asserção. Limiares calibrados: `caso-01` `flesch-min: 50`,
+  `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12` (este em observação —
+  margem 1,3 contra espalhamento de 6,1). `caso-03` e `caso-12` foram reprovados
+  na medição; o `pal-frase-max: 11` original do `caso-01` falhava ~28% e saiu.
+- **Abertos:** um achado **de harness**, não de regra — `FLAKY` não imprime motivo,
+  então soluço de API e falha de asserção saem idênticos. Conserto proposto na
+  seção do `caso-14`. Nenhum achado de regra aberto.
 
-## Rodadas
+## Rodadas — goal-cobertura
 
 | # | Regra | Caso criado | Resultado |
 |---|---|---|---|
@@ -336,12 +341,412 @@ ortografia não pesava no prompt, pesava na `description`. O léxico não era pe
 por descuido, era pequeno por escopo. **Medir antes de mexer separou o conserto
 real da reação ao sintoma** nos dois casos.
 
-## Como retomar
+## Sessão seguinte — harness do loop adversarial (2026-08-14)
 
-```bash
-./init.sh --cobertura                # onde está o gap (não chama o Claude, é instantâneo)
-python3 tools/build.py --verificar   # dist/ e docs/ em dia (também grátis)
-./init.sh                            # a suite continua verde?
+Sem rodada de loop: só o gate e o roteamento de modelo que o
+`goal-falso-positivo.md` precisa para existir. Nenhum caso novo, nenhuma regra
+tocada.
+
+### O gate não podia contar contra-teste antigo
+
+A matriz está 8/8 e 8/8, então "tem contra-teste" já não distingue nada. Pior:
+PTC-6 tem 4 contra-testes e sairia "pronta" sem uma linha adversarial. O critério
+mecânico passou a ser **origem do caso**, marcada no nome do arquivo
+(`caso-adv-*`) — zero mudança no parser, e `PTC_ADVERSARIAL=1` filtra a coluna.
+
+Estado inicial: **0/8 adversarial** contra 8/8 contra-teste na mesma árvore. As
+duas saírem diferentes é a verificação do filtro; iguais significaria gate que
+não gateia.
+
+### `ESCALOU` — o passo manual que virava achado inventado
+
+O `AGENTS.md` mandava rodar com opus antes de concluir quebra da skill, porque
+modelo menor às vezes aplica a correção e não cita a regra. Era passo manual, e
+esquecê-lo custa mais neste loop que nos anteriores: aqui um `FAIL` de rótulo
+vira **achado de falso positivo registrado neste arquivo**, ou seja, ruído com
+cara de evidência.
+
+Automatizado como estado próprio, não como retentativa silenciosa — mesma razão
+do `FLAKY`. Só escala depois das 3 tentativas e **só se houve resposta para
+avaliar**: escalar depois de timeout gasta o modelo caro em nada.
+
+Custo em rodada verde: zero. Só toca opus no que já falhou três vezes.
+
+### Haiku não entrou como default
+
+`PTC_MODELO=haiku` sempre funcionou sem código. Medido de passagem: haiku passou
+o `caso-01` inteiro (8/8 regras, 1ª tentativa). Um caso não é medição, e o risco
+não é prosa pior — é modelo menor **citar menos regra na tabela**, que é
+exatamente o que `avaliar()` lê. Fica como possibilidade medida pela metade.
+
+### O harness ganhou check próprio
+
+`ESCALOU` é um branch que **nenhum caso de teste alcança**: reproduzi-lo de
+verdade depende do modelo menor falhar, que é o que não se controla — a tentativa
+com haiku no `caso-01` saiu PASS. A decisão saiu de dentro do `main` para
+`veredito()`, e `tests/test_runner.py` a exercita com `rodar` dublado. 7 checks,
+grátis, rodando no `./init.sh` junto do `build.py --verificar`.
+
+Os dois branches novos foram verificados por mutação — escalar depois de timeout
+e filtro adversarial inerte, ambos pegos. Check que não falha quando o código
+quebra não verifica nada, e este repo já gastou uma sessão inteira nessa lição.
+
+## Sessão seguinte — a 4ª asserção: legibilidade medida (2026-08-16)
+
+O harness verificava **qual regra disparou** e **quais termos sobreviveram**, nunca
+o texto. O `AGENTS.md` admitia isso numa frase ("a asserção é sobre qual regra
+disparou, não sobre a qualidade da prosa"). Demonstrado em vez de suposto: uma
+saída forjada com a tabela citando as 8 regras e o texto final
+`banana front-end banana usuário banana` **passa** no `caso-01` de hoje. Com
+`flesch-min: 55`, reprova.
+
+### A fórmula é nossa porque o textstat não tem português
+
+`LANG_CONFIGS` do textstat 0.7.12 tem `en, de, es, fr, it, nl, pl, ru, hu`.
+`set_lang("pt_BR")` **não levanta erro** — cai nas constantes do inglês, e
+`flesch_reading_ease` devolve número calibrado para inglês sobre texto português.
+Do textstat só se usa o que vale em PT: `syllable_count` (via Pyphen, que tem
+`hyph_pt_BR.dic`), `lexicon_count`, `sentence_count`. A fórmula é o Flesch
+adaptado ao PT-BR de Martins et al. 1996 (USP São Carlos), em
+`tests/legibilidade.py`.
+
+Primeira dependência do repo. A skill continua Markdown puro.
+
+### Duas armadilhas de contagem, uma específica deste repo
+
+`count_sentences` racha em **qualquer** `.`: `1.5 GB` vira duas frases. Aqui isso
+é grave porque a PTC-7 troca `1.5` por `1,5` — entrada e texto final sairiam com
+contagens diferentes por um motivo que não é legibilidade. `normaliza()` neutraliza
+`(?<=\d)\.(?=\d)` **dos dois lados**; `teste_decimal_nao_racha_frase` trava isso.
+
+A segunda: fragmento de ≤2 palavras é descartado e o retorno é `max(1, ...)`, então
+a guarda de divisão por zero é sobre palavras, não frases.
+
+### A faixa do `flesch-min` era `[0, 100]` e estava errada
+
+Pego por `teste_gate_metrica_reprova_e_aprova`, que testa um **par** — o gate
+reprova texto ruim *e* aprova texto bom. Só a primeira metade teria ficado verde
+com a faixa quebrada. Medido: burocratês 35, `caso-01` cru 52, reescrita PTC boa
+acima de 100, período único de palavras longas −79. A escala de Martins é nominal
+e transborda nas duas pontas; o teto real da fórmula é 163,22. Faixa corrigida
+para `[-100, 160]`, com os números no comentário para ninguém "consertar" de volta.
+
+### Calibração — 25 medições, e 2 dos 3 palpites caíram
+
+`--metricas` 5× nos 5 candidatos. O palpite escrito no plano era 01, 03, 13.
+
+| Caso | flesch do texto final, 5 rodadas | pior | entrada | resultado |
+|---|---|---|---|---|
+| 01 | 55,9 · 63,3 · 66,3 · 60,8 · 67,0 | 55,9 | 51,6 | `pal-frase-max: 11` |
+| 03 | 32,9 · 37,6 · 37,6 · 32,9 · 32,9 | 32,9 | 35,3 | **sem limiar** |
+| 11 | 73,2 nas cinco | 73,2 | 52,0 | `flesch-min: 68` |
+| 12 | — · 72,3 · 72,3 · 72,3 · 72,3 | 72,3 | 72,3 | **sem limiar** |
+| 13 | 80,3 · 76,4 · 71,5 · 79,0 · 74,1 | 71,5 | 73,5 | `pal-frase-max: 12` |
+
+**`caso-03` reprovado:** nível `leve`, o flesch *cai* em 3 de 5 rodadas e
+palavras/frase fica 9,0 nas cinco — idêntico à entrada. A métrica não se move;
+um limiar aqui asseraria a entrada.
+
+**`caso-12` reprovado:** a saída é numericamente igual à entrada em 4 rodadas, e a
+rodada 1 **não produziu seção "Texto final"**. Um limiar teria dado FAIL 1/5 por
+formato, não por legibilidade — é para isso que a regra dos 5/5 existe.
+
+**`caso-11` foi o inverso do previsto:** texto curto, previsão de ruído, e deu
+variância **zero** — 73,2 nas cinco, 21 pontos acima da entrada.
+
+Onde o limiar entrou em `pal-frase-max`, foi porque lá ele assere *melhora*: no
+`caso-01` a entrada tem 13,1 palavras/frase e o teto é 11, então uma saída que não
+mexesse no texto reprovaria. `flesch-min` calibrado costuma cair **abaixo** da
+entrada e vale como piso contra reescrita inchada, não como prova de melhora.
+
+### O que a métrica não vê
+
+Repetição — "O operador deve" 6× no `caso-01` é prosa robótica e o Flesch
+**premia** isso. Fidelidade — o modelo completou um objeto elíptico com
+"o andamento da restauração" e declarou em "Mantido de propósito"; nenhum número
+confere se a inferência estava certa. Ela é piso contra inchaço, não juiz de
+qualidade. Estilo e fidelidade continuam por conta de `nao-marca` com termo
+concreto.
+
+### Falha de métrica não escala
+
+`ESCALOU` significa colisão de rótulo. Texto difícil de ler não é isso, e o opus
+reescrever melhor não desmente regressão nenhuma. O guard é
+`escalavel = [f for f in falhas if f[0] != "métrica"]` em `veredito()`, com o par
+`teste_metrica_nao_escala` / `teste_metrica_escala_com_rotulo` provando que ele
+filtra por rótulo, não por "o caso tem métrica".
+
+## Rodadas — goal-falso-positivo
+
+### Rodada 1 — PTC-4, `executar` com objeto concreto (2026-08-16)
+
+Adversarial 0/8 → **1/8**. `caso-adv-4-executar-objeto-concreto.md`, verde de
+primeira, sem medição extra.
+
+A escolha não foi pela ordem da matriz e sim por lacuna: `lexico.md:40-41` decide
+que `executar a validação` é verbo-suporte e `execute o script` é verbo pleno —
+distinção que saiu do conserto da contradição do `executar` (de05802) e ficou
+**sem asserção nenhuma atrás**, duas linhas de tabela em prosa. O `caso-10` cobre
+nominalização como *sujeito*; ninguém cobria o gatilho superficial literal da
+regra, que é verbo leve + substantivo.
+
+Entrada: três `executar` com objeto concreto (`script`, `testes`, `script`).
+Descartei `plano de reversão` de propósito — ali `reversão` **é** nominalização e
+a linha ficaria discutível em vez de decisiva.
+
+Sem achado na skill. A PTC-4 respeitou a fronteira nas duas leituras.
+
+**Mas a rodada achou um bug no harness**, e o modo de falha é o interessante:
+`teste_filtro_adversarial` afirmava `codigo_on == (0 if adv else 1)` — ou seja,
+"existe ao menos um `caso-adv` ⇒ a matriz adversarial está fechada". Isso só vale
+com as 8 regras cobertas. Enquanto `caso-adv-*` não existia, o ramo `0 if adv`
+era **código morto**: a asserção nunca tinha rodado nesse lado. O primeiro caso
+adversarial da história do repo derrubou a suite inteira sem nenhuma regressão
+real.
+
+Consertado para a invariante certa — a matriz fecha quando **todas** as 8 regras
+têm `caso-adv-*` declarando-as em `contra-teste`:
+
+```python
+regras_adv = {r for c in casos if c.stem.startswith(verify.PREFIXO_ADV)
+              for r in verify.parse_caso(c)["contra_teste"]}
+fechada = len(regras_adv) == len(verify.REGRAS)
+assert codigo_on == (0 if fechada else 1), (codigo_on, sorted(regras_adv))
 ```
 
-As duas saindo 0 = objetivo atingido. Para reabrir o loop com objetivo novo, escreva outro `goal-*.md` — o de caça a falso positivo adversarial é o próximo candidato natural.
+Verificado por mutação: forçando `cobertura()` a devolver 0 com só a PTC-4
+coberta, a asserção recusa. A versão nova é **mais estrita** que a antiga, não
+mais frouxa — ela falha num estado que a antiga nem alcançava.
+
+Lição, que é a mesma do `goal-cobertura`: check escrito para um estado futuro
+não é check, é intenção. Ele só vira verificação na primeira vez que o estado
+chega — e é aí que ele cobra a fatura, no meio de outra tarefa.
+
+### Rodada 2 — PTC-2, relativa restritiva longa (2026-08-16)
+
+Adversarial 1/8 → **2/8**. `caso-adv-2-relativa-restritiva-longa.md`, verde de
+primeira. Sem achado.
+
+O `caso-06` já era contra-teste da PTC-2, mas com relativa de duas palavras
+(`que falharam`) — curta demais para tentar alguém a cortar. O adversarial usa
+uma restritiva de dez palavras: quanto mais longa, mais ela *parece* aposto e
+mais convida à vírgula. E a vírgula ali não é estilo — `arquivos que o operador
+enviou` são alguns arquivos, `arquivos, que o operador enviou,` são todos.
+
+**A âncora foi escolhida para morrer no erro certo.** `nao-marca` é
+`arquivos que o operador`, não `que o operador enviou`: a segunda sobreviveria
+intacta à inserção da vírgula, que é exatamente o falso positivo procurado.
+Âncora que sobrevive ao erro que ela deveria pegar é âncora inerte — mesma
+família do check morto da rodada 1.
+
+Descartei entrada com `enquanto`: duas proposições numa frase fazem a PTC-2
+dividir com razão, e a asserção viraria moeda ao ar em vez de decidir.
+
+### Rodada 3 — PTC-3, `talvez` prescrito × "zero hedge" (2026-08-16)
+
+Adversarial 2/8 → **3/8**. `caso-adv-3-talvez-e-pode-permissao.md`, **5/5** com
+`PTC_TENTATIVAS=1`. Sem achado — mas o alvo era outro tipo de coisa.
+
+Este caso não foi atrás de um terreno da regra e sim de uma **contradição interna
+suspeita**, com a mesma assinatura do achado do `apenas`:
+
+```
+SKILL.md:95   "Zero hedge."
+SKILL.md:93   probabilidade: proibido usar modal — dê número ou escreva `talvez`
+```
+
+`talvez` prescrito numa linha, condenado na outra, e as duas concatenadas no mesmo
+prompt. O `apenas` ficou invisível meses exatamente assim, e só apareceu porque o
+modelo decidia diferente a cada rodada — foi por isso que aqui um PASS de primeira
+não bastou.
+
+**Resultado: a contradição é textual mas não está mordendo.** 5/5 preservou
+`talvez`. Isso não é motivo para reescrever nada no `SKILL.md` — a divisão que o
+`apenas` recebeu (`lexico.md:38-39`) foi paga por evidência de oscilação, e aqui
+não há. O valor da rodada é que agora **existe asserção atrás da linha**: se uma
+edição futura pender a balança, o caso pega. Antes, nada pegava.
+
+Se a skill cortasse `talvez`, as duas saídas seriam achado: trocar por modal viola
+a própria célula que proíbe modal para probabilidade, e inventar número inventa
+fato. Por isso a âncora é `talvez` sozinho — as duas matam o substring.
+
+### Observação aberta — `caso-01` e `caso-14` instáveis na suite da rodada 2
+
+A suite saiu 16/16 e **2 instáveis**: `caso-01` passou na 3ª de 3, `caso-14` na 2ª
+de 3. Nas quatro suites anteriores do mesmo dia, zero flaky.
+
+`caso-01` é o que ganhou `pal-frase-max: 11` nesta sessão, então a primeira
+hipótese é limiar apertado demais — apesar de ele ter fechado 5/5 na confirmação
+da calibração. Em medição, 5 amostras não distinguem 0% de ~15% de falha.
+
+A linha `FLAKY` **não diz qual asserção falhou** — o runner só imprime detalhe em
+`FAIL`. Isso é lacuna do harness, não desta rodada: quem investiga flaky tem de
+remedir com `PTC_TENTATIVAS=1` só para descobrir qual das quatro asserções caiu.
+
+### Resolvido — o limiar do `caso-01` era meu, e estava errado
+
+Não precisou de rodada nova: a resposta já estava nos dados do mesmo dia.
+
+| Origem da medição | pal/frase da saída |
+|---|---|
+| calibração (5×) | 9,1 · 8,0 · 9,0 · 7,6 · 8,6 |
+| fumaça do `--metricas` | **11,4** |
+| execução avulsa (`mostrar.py`) | **12,1** |
+
+**2 de 7 estouram `pal-frase-max: 11`** — ~28% de falha, que explica um `FLAKY`
+passando na 3ª de 3. O erro tem duas camadas e a segunda é a que importa: as 5
+amostras da calibração caíram agrupadas entre 7,6 e 9,1 por sorte, e as duas
+discordantes **já estavam medidas** — foram ignoradas por não terem saído do laço
+de calibração. Isso é escolher os dados que confirmam o limiar.
+
+Conserto: `pal-frase-max: 11` → **`flesch-min: 50`**. 0 de 7 fora, margem 5,9, e
+ainda reprova o texto-lixo (12,1) que motivou a métrica. O que ele perde: **não
+assere melhora** — a entrada é 51,6, então reescrita nula passaria. É o teto real
+deste caso: a saída varia de 7,6 a 12,1 pal/frase contra entrada de 13,1, então as
+distribuições encostam e não cabe margem e asserção de melhora ao mesmo tempo.
+
+O `AGENTS.md` ganhou três passos que faltavam no procedimento: olhar o
+**espalhamento** e não só o pior valor; cruzar com **toda** medição avulsa do
+caso; e reconhecer quando não existe limiar bom.
+
+### Remedição de `caso-11` e `caso-13` (7 amostras cada)
+
+- **`caso-11`** — flesch **73,2 nas sete**, variância zero. `flesch-min: 68` com
+  margem 5,2. Sólido, mantém.
+- **`caso-13`** — p/f 4,6 · 6,0 · 8,2 · 8,2 · 8,2 · 10,7 · 10,7. `pal-frase-max: 12`
+  com margem 1,3 contra espalhamento de 6,1 — mesmo perfil de risco do `caso-01`.
+  **Mantido em observação:** 0 de 7 violações, e no `caso-01` havia 2 na mão. Se
+  ele aparecer `FLAKY` numa suite, tire a chave em vez de remedir.
+
+Nota de método: as 3 últimas de 5 remedições voltaram vazias — erro de API por
+limite de taxa depois de muitas chamadas seguidas. Vale orçar isso: uma sessão que
+mede muito bate no teto e as medições perdidas parecem dado, não falha.
+
+### Rodada 4 — PTC-7, identificadores de rede (2026-08-16)
+
+Adversarial 3/8 → **4/8**. `caso-adv-7-identificadores-de-rede.md`, verde de
+primeira. Sem achado.
+
+O `caso-09` cobria o ponto que separa versão de decimal (`v1.5`, `3.11`,
+`1,5 GB`). Sobrou o resto do terreno que o goal file lista e ninguém testou:
+porta `:8080`, CIDR `10.0.0.0/24`, semver de três campos e hash curto.
+
+`1.10.2` é o item perigoso, e está na entrada ao lado de `1.2` de propósito:
+trocar o ponto por vírgula não só quebra o identificador como **inverte a
+ordenação** — `1.10.2` é maior que `1.2` em semver e menor em decimal. Se a
+PTC-7 disparar ali, o erro tem consequência visível na própria frase, não só na
+grafia.
+
+Nota que vale para quem for pôr limiar depois: este é o pior caso possível para a
+métrica. `normaliza()` troca ponto entre dígitos por vírgula para não rachar
+frase, então ela mede `1,10,2`. Não afeta asserção nenhuma aqui — as âncoras são
+substring do texto cru —, mas **não ponha `flesch-min` nem `pal-frase-max` neste
+caso**.
+
+### Achado aberto — `FLAKY` não é diagnosticável, e isso custou uma investigação
+
+O `caso-14` saiu `FLAKY` em duas suites (rodadas 2 e 4). Medido 5× com
+`PTC_TENTATIVAS=1`: **5/5 PASS.**
+
+A hipótese registrada antes da medição estava **errada**, e vale guardar o erro: o
+`caso-14` empilha quatro decisões de desambiguação de sentido (`suportar` de
+carga, `sensível` de dado, `atualmente` de tempo, `executar` de objeto concreto),
+cada uma numa entrada do léxico com divisão "corte este sentido / mantenha
+aquele". Parecia fragilidade estrutural — quatro julgamentos independentes numa
+asserção só, ~81% de acerto composto se cada um acerta 95%. Os quatro
+sobreviveram nas cinco rodadas.
+
+O que resta: 2 flakies em suites de **18 chamadas seguidas**, 0 em rodadas
+isoladas. Nesta mesma sessão houve erro de API por limite de taxa, com medições
+voltando vazias. `rodar()` devolvendo `None` conta como tentativa falha, a
+retentativa passa, e sai `FLAKY`. **Provável infra, não skill.**
+
+**O achado real é do harness:** `FLAKY` não imprime detalhe — só `FAIL` imprime.
+Então falha de asserção e soluço de API saem idênticas na tela, e a única forma de
+separar é remedir o caso isolado, o que custa 5 chamadas e só responde depois. Num
+gate de 18 chamadas sequenciais, falha transitória é esperada, e hoje ela se
+disfarça de instabilidade da skill.
+
+Conserto proposto (**outra sessão** — `verify.py` está fora do escopo deste loop):
+`veredito()` já sabe por que cada tentativa falhou; basta guardar o motivo da
+primeira falha e imprimi-lo na linha `FLAKY`, como já se faz em `FAIL`. Distinguir
+`sem resposta do modelo` de `corrigiu indevidamente: X` transforma cada flaky de
+investigação em leitura.
+
+Enquanto isso não existe: **flaky que não reproduz isolado 5/5 é infra**, e não
+deve gerar conserto na skill nem no caso.
+
+### Rodada 5 — PTC-8, o hífen que fica (2026-08-16)
+
+Adversarial 4/8 → **5/8**. `caso-adv-8-hifen-que-fica.md`, verde de primeira. Sem
+achado.
+
+O `caso-04` já era contra-teste da PTC-8, mas com **convenção de estilo** —
+`front-end`, `data center`, `e-mail`. São palavras que a regra deixa em paz por
+decisão declarada ("O que NÃO é erro"), não por mecânica de hífen. A mecânica em
+si nunca tinha sido atacada.
+
+Três formas corretas caem no mesmo gatilho superficial (prefixo + palavra em
+`r`/`s`) por motivos **opostos**:
+
+| Forma | Por que está certa |
+|---|---|
+| `sub-rede` | prefixo termina em consoante → hífen fica |
+| `microsserviços` | prefixo termina em vogal → dobra o `s`, sem hífen |
+| `pós-processamento` | prefixo tônico e acentuado → hífen sempre |
+
+`sub-rede` é o item perigoso e é termo de rede de runbook real: aplicar a dobra
+ali produz `subrrede`, que não existe. As três juntas obrigam a regra a decidir
+três vezes em direções diferentes na mesma entrada.
+
+`infraestrutura` entra como quarto termo e fecha um par com o lado positivo: o
+`caso-01` planta `infra-estrutura` **errada** de propósito; aqui ela está certa e
+não pode ser tocada.
+
+Descartei `pré-requisito`: `prerrequisito` também é forma atestada, então a
+asserção seria moeda ao ar. Adversarial precisa de item onde só uma grafia está
+certa — mesma disciplina que tirou `a qualquer momento` da rodada 3 e
+`plano de reversão` da rodada 1.
+
+## Como retomar
+
+Instale o harness uma vez — ele deixou de ser stdlib puro:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+```
+
+Depois, o que é grátis primeiro:
+
+```bash
+PTC_ADVERSARIAL=1 ./init.sh --cobertura   # o gap aberto: 5/8 (grátis)
+./init.sh --cobertura                      # matriz fechada: 8/8 e 8/8 (grátis)
+.venv/bin/python3 tests/test_runner.py     # 15 checks do runner (grátis)
+./init.sh                                  # 19 casos — última rodada: 19/19, exit 0
+```
+
+O loop aberto é `loops/goal-falso-positivo.md` — rode com `/loop` sem intervalo.
+O `goal-cobertura.md` está fechado; não reabra.
+
+**Faltam três regras no adversarial: PTC-1, PTC-5, PTC-6.** Terrenos que o goal
+file sugere e que ninguém testou ainda:
+
+| Regra | Português correto que pode ser confundido com a violação |
+|---|---|
+| PTC-1 | `-se` pronominal inerente em cadeia (`o processo se encerra e se registra`) |
+| PTC-5 | cadeia de `de` com termo lexicalizado — cada um conta como **um** nó (`chave de API do banco de dados` são 2, não 4) |
+| PTC-6 | sigla consagrada que não pede expansão (`CPU`, `URL`, `HTTP`) |
+
+Duas disciplinas que as cinco rodadas confirmaram e que economizam rodada perdida:
+
+1. **Escolha item onde só uma forma está certa.** Foram descartados
+   `plano de reversão` (rodada 1), `a qualquer momento` (rodada 3) e
+   `pré-requisito` (rodada 5) — todos discutíveis, e asserção discutível não
+   decide nada.
+2. **A âncora tem de morrer no erro que ela deveria pegar.** Na rodada 2, a
+   âncora virou `arquivos que o operador` porque `que o operador enviou`
+   sobreviveria à vírgula, que era o falso positivo procurado.
+
+E uma dívida de harness registrada acima: `FLAKY` não imprime motivo, então
+soluço de API se disfarça de instabilidade da skill. Enquanto isso não muda,
+**flaky que não reproduz isolado 5/5 é infra** — não gere conserto por causa dele.

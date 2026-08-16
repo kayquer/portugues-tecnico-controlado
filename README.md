@@ -268,6 +268,7 @@ portugues-tecnico-controlado/
 ├── tools/build.py                  # gera dist/ e docs/ a partir da skill
 ├── tests/                          # harness de regressão
 ├── loops/                          # goal loops e estado entre sessões
+├── requirements.txt                # dependência do harness — a skill não usa
 ├── init.sh                         # roda a verificação
 └── AGENTS.md                       # como editar a skill sem quebrá-la
 ```
@@ -284,23 +285,89 @@ portugues-tecnico-controlado/
 ./init.sh                     # roda todos os casos de regressão
 ./init.sh caso-01             # um caso só
 ./init.sh --cobertura         # matriz de cobertura, não chama a API, é instantâneo
+./init.sh --metricas          # legibilidade antes/depois, sem gatear (calibra os limiares)
 PTC_MODELO=opus ./init.sh     # outro modelo (default: sonnet)
 PTC_TENTATIVAS=1 ./init.sh    # sem retry, para medir instabilidade
 ```
 
 O runner concatena `SKILL.md` + `references/*.md` **deste repo** e manda para `claude -p`. Ele testa o arquivo que você acabou de editar, não a cópia instalada em `~/.claude/skills/`.
 
-Como output de LLM não é determinístico, ele não compara texto. Verifica três coisas:
+Como output de LLM não é determinístico, ele não compara texto. Verifica quatro coisas:
 
 - **cobertura**: toda regra de `espera:` apareceu na tabela de violações
 - **falso positivo**: todo termo de `nao-marca:` sobreviveu intacto no texto reescrito
 - **âncora**: todo termo de `deve-conter:` apareceu na saída
+- **legibilidade**: o texto final passa dos limiares `flesch-min:`/`pal-frase-max:` do caso
 
-O segundo é o que impede a skill de virar um corretor que "conserta" português correto. O terceiro cobre o que não tem número de regra próprio: a flag `destinatário: agente` e o pipeline bilíngue, que pela tabela de violações seriam indistinguíveis de um caso comum.
+O segundo é o que impede a skill de virar um corretor que "conserta" português correto. O terceiro cobre o que não tem número de regra próprio: a flag `destinatário: agente` e o pipeline bilíngue, que pela tabela de violações seriam indistinguíveis de um caso comum. O quarto mede a prosa, que os outros três não olham — a skill podia devolver reescrita correta e ilegível com todos os casos verdes. É o Flesch adaptado ao PT-BR (Martins et al. 1996) calculado sobre os contadores do [textstat](https://github.com/textstat/textstat); a fórmula é do projeto porque o textstat não tem português, e cada limiar é medido, nunca escolhido a olho.
 
 Cada regra precisa de **dois** casos: um que a faz disparar e um contra-teste que prova que ela não dispara onde não deve. `./init.sh --cobertura` monta essa matriz e sai 0 quando ela fecha.
 
-Fluxo completo, definition of done e clean-state checklist em [`AGENTS.md`](AGENTS.md). Requisitos: [Claude Code](https://claude.com/claude-code) e Python 3.
+Fluxo completo, definition of done e clean-state checklist em [`AGENTS.md`](AGENTS.md). Requisitos do harness: [Claude Code](https://claude.com/claude-code), Python 3 e `pip install -r requirements.txt` (textstat, para a métrica de legibilidade). **Usar a skill não precisa de nada disso** — ela é Markdown.
+
+---
+
+## Como este projeto foi construído
+
+Uma skill é um prompt, e prompt não tem compilador. Não existe erro de sintaxe quando uma regra passa a se contradizer, nem stack trace quando ela começa a "consertar" português que já estava certo. Todo o resto deste repositório existe para responder a uma pergunta só: **como saber se uma mudança no texto da skill melhorou ou quebrou alguma coisa.**
+
+### As regras vieram do português, não da tradução
+
+O ponto de partida foi o ASD-STE100 — o inglês técnico simplificado da indústria aeroespacial. Traduzir as 53 regras dele não funciona, e a seção [Por que não é o STE traduzido](#por-que-não-é-o-ste-traduzido) explica por quê: metade vira regra vazia em português, e os vícios que mais causam ambiguidade em português (sujeito nulo, `-se` apassivador, posição do adjetivo, escopo decidido por vírgula) o STE nunca precisou cobrir, porque o inglês obriga o sujeito.
+
+As 8 regras foram escritas do zero contra as características reais do idioma. Não existe norma equivalente para o português — nem da ABNT, nem da ASD — então isto não implementa um padrão, aplica o princípio da linguagem controlada.
+
+### O harness não compara texto
+
+A tentação óbvia é gravar a saída esperada e comparar. Não funciona: output de LLM não é determinístico, e um teste assim fica vermelho por sinônimo trocado.
+
+O runner ([`tests/verify.py`](tests/verify.py)) concatena `SKILL.md` + `references/*.md` **deste repositório** — não a cópia instalada — manda para o modelo e verifica quatro coisas sobre a resposta:
+
+| Asserção | Chave do caso | O que prova |
+|---|---|---|
+| cobertura | `espera:` | a regra apareceu na tabela de violações |
+| falso positivo | `nao-marca:` | um termo correto sobreviveu intacto ao texto final |
+| âncora | `deve-conter:` | comportamento sem número PTC próprio aconteceu |
+| legibilidade | `flesch-min:` / `pal-frase-max:` | a reescrita não é correta-e-ilegível |
+
+Cada regra precisa de **dois** casos: um positivo, que a faz disparar, e um contra-teste, que prova que ela não dispara onde não deve. `./init.sh --cobertura` monta essa matriz e é grátis — não chama a API.
+
+**Oscilação é tratada como dado, não como ruído.** Rodando a suite três vezes sem mudar nada, casos *diferentes* falhavam a cada rodada. Por isso o runner repete cada caso até 3 vezes e distingue quatro estados: `PASS`, `FLAKY` (passou numa retentativa — conta como ok, mas aparece destacado), `ESCALOU` (falhou no modelo menor e passou no maior — é colisão de rótulo, não quebra) e `FAIL`. Sem essa separação, o gate acusaria regressão inexistente e apontaria um culpado diferente toda vez.
+
+### Goal loops com critério mecânico de parada
+
+As melhorias não vêm de "achar que já deu". Cada frente de trabalho é um arquivo em [`loops/`](loops/) no formato do [learn-harness-engineering](https://github.com/walkinglabs/learn-harness-engineering) (lecture-13), com objetivo, verificação executável, condição de parada e restrições explícitas. O loop roda com `/loop` — o agente se auto-pauta e para no critério do próprio arquivo, não quando parece suficiente.
+
+| Loop | Critério de parada | Estado |
+|---|---|---|
+| `goal-cobertura.md` | `./init.sh --cobertura` sai 0 | fechado — 8/8 positivo, 8/8 contra-teste |
+| `goal-falso-positivo.md` | `PTC_ADVERSARIAL=1 ./init.sh --cobertura` sai 0 | aberto — 4/8 |
+
+O segundo existe porque o primeiro fechou com contra-testes escritos **junto com a regra**, pelo mesmo raciocínio que a regra usa. Todos testam a leitura legítima óbvia (`o serviço se reinicia` não é `-se` apassivador). Nenhum testa português correto que *se parece* com a violação — que é o modo de falha que mais escapa. O contra-teste adversarial parte de um texto bom e pergunta o que a regra pode confundir com erro.
+
+Uma restrição dura do loop de caça: ele **não conserta**. Achar o falso positivo é o produto; consertá-lo é outra sessão. Um loop que caça e conserta na mesma rodada não sabe dizer se o conserto criou o próximo achado.
+
+### A métrica de legibilidade é código do projeto
+
+As três primeiras asserções medem **qual regra disparou**, nunca o texto. O buraco era demonstrável: uma saída com a tabela citando as 8 regras corretas e o texto final `banana front-end banana usuário banana` passava.
+
+A quarta asserção fecha isso, e a implementação é do projeto por um motivo específico: **o [textstat](https://github.com/textstat/textstat) não tem português.** `set_lang("pt_BR")` não levanta erro — cai nas constantes do inglês em silêncio, e devolve um número calibrado para inglês sobre texto português. Do textstat se usa só o que vale em PT (contagem de sílabas via Pyphen, que tem dicionário `pt_BR`; palavras; frases), e o cálculo é o **Flesch adaptado ao português por Martins et al. 1996** (USP São Carlos), que reescreve os pesos porque palavra em português é cerca de três vezes maior que em inglês.
+
+**Limiar se mede, não se chuta.** `./init.sh --metricas` roda os casos e imprime entrada × saída sem gatear; o número só vira chave depois de 5 medições, com margem, e confirmado 5/5. Três dos casos têm limiar hoje — os outros foram reprovados na medição por não medirem nada.
+
+### O que o processo encontrou
+
+O valor do harness não é o verde. É isto:
+
+| Achado | Como apareceu |
+|---|---|
+| A skill se contradizia sobre `apenas` — prescrito numa regra, condenado no léxico | oscilação: o modelo decidia diferente a cada rodada |
+| Plural de sigla saía etiquetado como PTC-8 em vez de PTC-6 | 4/5 na citação, 6/6 na correção — era rótulo, não lacuna |
+| Duas âncoras de teste eram moeda ao ar | medição 5× reprovou; consertadas na **entrada**, não encurtando a âncora |
+| Um check do próprio runner era código morto | o primeiro caso adversarial escrito derrubou a suite sem existir regressão |
+| Um limiar de legibilidade falhava 28% das vezes | `FLAKY` na suite; a calibração tinha ignorado duas medições avulsas discordantes |
+
+Nenhum desses aparece lendo o código. Todos apareceram porque existia um número para conferir e uma condição de parada que não aceitava opinião.
 
 ---
 
