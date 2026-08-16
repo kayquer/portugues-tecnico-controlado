@@ -5,11 +5,11 @@ começar a próxima. As seções estão em ordem cronológica; a última é a at
 
 ## Estado atual
 
-- **Objetivo aberto:** `loops/goal-falso-positivo.md` — contra-teste adversarial
-- **Adversarial:** 5/8 após as rodadas 1-5 (PTC-4, PTC-2, PTC-3, PTC-7, PTC-8) —
-  faltam PTC-1, PTC-5, PTC-6
+- **Nenhum objetivo aberto.** Os dois goal loops fecharam.
+- **Objetivo fechado:** `loops/goal-falso-positivo.md` — adversarial 8/8 ✓ em
+  2026-08-16, depois de 8 rodadas e **zero achado de falso positivo**
 - **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
-- **Suite:** 19 casos (2026-08-16)
+- **Suite:** 22 casos (2026-08-16) — 22/22, 1 instável (`caso-01`)
 - **Legibilidade:** 4ª asserção. Limiares calibrados: `caso-01` `flesch-min: 50`,
   `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12` (este em observação —
   margem 1,3 contra espalhamento de 6,1). `caso-03` e `caso-12` foram reprovados
@@ -708,6 +708,113 @@ asserção seria moeda ao ar. Adversarial precisa de item onde só uma grafia es
 certa — mesma disciplina que tirou `a qualquer momento` da rodada 3 e
 `plano de reversão` da rodada 1.
 
+### Rodada 6 — PTC-6, sigla consagrada não pede expansão (2026-08-16)
+
+Adversarial 5/8 → **6/8**. `caso-adv-6-sigla-consagrada.md`, PASS de primeira e
+**5/5** com `PTC_TENTATIVAS=1`. Sem achado — e a medição extra existe porque este
+caso foi atrás de contradição interna, como a rodada 3:
+
+```
+SKILL.md:130    "Expanda na primeira ocorrência" — sem exceção nenhuma
+lexico.md:165   sigla que já entrou na língua dispensa expansão (CPF, PDF, URL)
+```
+
+Assinatura do `apenas` e do `executar`. E desta vez havia **dano registrado**: o
+`caso-08` perdeu a âncora `chave de API do banco de dados` porque a skill expandiu
+para `chave da Interface de Programação de Aplicações (API) do banco de dados`. Na
+época o diagnóstico parou em "asserção frágil" e a âncora foi encurtada. Ninguém
+perguntou se a expansão em si era falso positivo da PTC-6.
+
+**Resposta: não é.** 5/5 preservou `a URL do painel`, `uso de CPU` e
+`resposta HTTP`. E o `caso-08` não desmente isso — `API` **não está** na lista de
+dispensa do léxico, então expandi-la é a regra funcionando como escrita. As duas
+observações convivem.
+
+Veredito igual ao do `talvez`: contradição textual que não morde não se reescreve.
+O ganho da rodada é a asserção que passou a existir atrás da linha.
+
+Âncora com artigo e preposição de propósito (`a URL do painel`, não `URL`): a
+expansão insere o nome por extenso **antes** do parêntese, então `URL` sozinho
+sobreviveria dentro de `(URL)`. Âncora inerte é o erro da rodada 1 com outra roupa.
+
+### Rodada 7 — PTC-5, cadeia com termo lexicalizado (2026-08-16)
+
+Adversarial 6/8 → **7/8**. `caso-adv-5-cadeia-lexicalizada.md`, verde de primeira.
+Sem achado.
+
+O `caso-08` já era contra-teste da PTC-5, mas pelo bullet do **adjetivo**. O bullet
+da cadeia de `de` ≤ 2 nós nunca foi atacado: o `do banco de dados` de lá é âncora
+encurtada por acidente de expansão de sigla, não teste de contagem.
+
+Duas frases com três preposições encadeadas cada, ambas dentro do limite, porque
+termo lexicalizado conta como **um** nó (`SKILL.md:114`):
+
+| Trecho | Nós |
+|---|---|
+| a fila de mensagens no banco de dados | [fila de mensagens] + [banco de dados] = 2 |
+| a taxa de erro do ponto de montagem | [taxa de erro] + [ponto de montagem] = 2 |
+
+Quem conta preposição em vez de nó acha 3 e quebra a frase — e quebrar
+`fila de mensagens` **inventa uma entidade `fila`** que não existe no sistema. A
+âncora é a cadeia inteira: `fila de mensagens` sozinho sobreviveria à quebra.
+
+`chave de API` é o exemplo canônico deste bullet e ficou de fora de propósito — a
+PTC-6 expande a sigla e mata o substring sem a PTC-5 ter disparado. Lição do
+`caso-08`, aplicada antes de custar a rodada em vez de depois.
+
+### Rodada 8 — PTC-1, `-se` inerente em cadeia (2026-08-16)
+
+Adversarial 7/8 → **8/8, matriz fechada**. `caso-adv-1-se-inerente-em-cadeia.md`,
+verde de primeira. Sem achado.
+
+O `caso-05` tinha **um** `-se` inerente isolado, e um `se` sozinho é fácil de
+absolver. Aqui são três em cadeia, e os três reprovam o teste mecânico do
+`SKILL.md:50` por motivos diferentes: `é conectado` inverte quem age,
+`é recusado a repetir` é agramatical, `é comportado` não existe.
+
+O goal file sugeria `o processo se encerra e se registra` para este terreno.
+Descartado: `se registra` vira `é registrado` sem perder nada, então o teste
+mecânico o condena **com razão** e a asserção seria moeda ao ar. Terceira vez que
+a disciplina do item de forma única tirou um candidato, depois de
+`plano de reversão` (rodada 1) e `pré-requisito` (rodada 5).
+
+Âncoras sem o `e` da coordenação: em `estrito` a PTC-2 pode quebrar a coordenação
+com razão, e `e se recusa` morreria nessa reescrita legítima sem falso positivo
+nenhum da PTC-1 — armadilha do `caso-08`. Sujeito nulo em coordenação já é âncora
+do `caso-05`.
+
+## Objetivo fechado — `goal-falso-positivo` (2026-08-16)
+
+```
+PTC_ADVERSARIAL=1 ./init.sh --cobertura   →  8/8, exit 0
+./init.sh                                 →  22/22, exit 0
+```
+
+As duas saem 0: condição de parada 1 do goal file. **Não reabra** — para objetivo
+novo, escreva outro `goal-*.md`.
+
+Resíduo: `caso-01` saiu `FLAKY` (2ª de 3), o único da suite. É o de sempre — o caso
+mais largo, 8 regras numa entrada só. Não medido aqui, e a dívida do `FLAKY` sem
+motivo impresso continua aberta: flaky que não reproduz isolado não gera conserto.
+
+### O que as 8 rodadas somam
+
+**Zero achado de falso positivo em 8 rodadas.** Nenhuma regra atropelou português
+correto — nem a mecânica do hífen, nem a contagem de nós, nem o `-se` inerente em
+cadeia. Os achados da série foram todos de outra natureza:
+
+| Rodada | Achado | Onde morava |
+|---|---|---|
+| 1 | check escrito para um estado futuro nunca tinha rodado | `tests/test_runner.py` |
+| 4 | `FLAKY` não imprime motivo — infra se disfarça de skill | `tests/verify.py` |
+| 3 e 6 | contradição textual medida e **não** consertada | `SKILL.md` × `lexico.md` |
+
+A regra que sai da série, e que contradiz o instinto: **contradição textual não é
+achado — oscilação é.** `apenas` e `executar` foram consertados porque o modelo
+decidia diferente a cada rodada. `talvez` e a expansão de sigla estão escritos com
+a mesma incoerência e deram 5/5 nos dois. Achar a contradição por leitura é barato
+e não decide nada; só a medição decide.
+
 ## Como retomar
 
 Instale o harness uma vez — ele deixou de ser stdlib puro:
@@ -719,30 +826,36 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 Depois, o que é grátis primeiro:
 
 ```bash
-PTC_ADVERSARIAL=1 ./init.sh --cobertura   # o gap aberto: 5/8 (grátis)
-./init.sh --cobertura                      # matriz fechada: 8/8 e 8/8 (grátis)
+PTC_ADVERSARIAL=1 ./init.sh --cobertura   # 8/8 — fechada (grátis)
+./init.sh --cobertura                      # 8/8 e 8/8 (grátis)
 .venv/bin/python3 tests/test_runner.py     # 15 checks do runner (grátis)
-./init.sh                                  # 19 casos — última rodada: 19/19, exit 0
+./init.sh                                  # 22 casos — última rodada: 22/22, exit 0
 ```
 
-O loop aberto é `loops/goal-falso-positivo.md` — rode com `/loop` sem intervalo.
-O `goal-cobertura.md` está fechado; não reabra.
+**Os dois goal loops estão fechados. Não reabra nenhum.** Objetivo novo pede
+`goal-*.md` novo, com verificação executável e condição de parada próprias.
 
-**Faltam três regras no adversarial: PTC-1, PTC-5, PTC-6.** Terrenos que o goal
-file sugere e que ninguém testou ainda:
+O que ficou candidato a próxima sessão, em ordem de evidência:
 
-| Regra | Português correto que pode ser confundido com a violação |
-|---|---|
-| PTC-1 | `-se` pronominal inerente em cadeia (`o processo se encerra e se registra`) |
-| PTC-5 | cadeia de `de` com termo lexicalizado — cada um conta como **um** nó (`chave de API do banco de dados` são 2, não 4) |
-| PTC-6 | sigla consagrada que não pede expansão (`CPU`, `URL`, `HTTP`) |
+| # | O que | Estado da evidência |
+|---|---|---|
+| 1 | `FLAKY` imprimir o motivo da 1ª falha em `verify.py` | dívida de harness medida, conserto já proposto na seção da rodada 4 |
+| 2 | check grátis de colisão léxico ↔ `SKILL.md` em `test_runner.py` | procedimento que só existe em prosa desde 08-12; a varredura manual acha `validar` (✅ 4× no `SKILL.md`, "congele um sentido" no léxico), `gerar` e `atualizar` sem asserção atrás |
+| 3 | `SKILL.md` sempre emitir "Texto final", mesmo sem mudança | 1 de 5 rodadas do `caso-12` não emitiu; o harness tem classe de erro só para isso |
+| 4 | onde o léxico **não** mora — cláusula de fronteira no molde da PTC-8 | preventivo: as entradas do léxico têm rótulo próprio (PTC-1, PTC-3, PTC-4) e nada diz qual citar |
 
-Duas disciplinas que as cinco rodadas confirmaram e que economizam rodada perdida:
+Os itens 2 e 4 são preventivos e **não** têm oscilação medida. A série de 8
+rodadas mostrou duas vezes que contradição textual sem oscilação não se conserta
+— trate-os como "escrever a asserção primeiro, decidir depois".
+
+Duas disciplinas que as oito rodadas confirmaram e que economizam rodada perdida:
 
 1. **Escolha item onde só uma forma está certa.** Foram descartados
-   `plano de reversão` (rodada 1), `a qualquer momento` (rodada 3) e
-   `pré-requisito` (rodada 5) — todos discutíveis, e asserção discutível não
-   decide nada.
+   `plano de reversão` (rodada 1), `a qualquer momento` (rodada 3),
+   `pré-requisito` (rodada 5), `chave de API` (rodada 7, por causa da expansão de
+   sigla) e `o processo se encerra e se registra` (rodada 8, porque `se registra`
+   **é** o `-se` proibido) — todos discutíveis, e asserção discutível não decide
+   nada. Dois deles vinham sugeridos pelo próprio goal file.
 2. **A âncora tem de morrer no erro que ela deveria pegar.** Na rodada 2, a
    âncora virou `arquivos que o operador` porque `que o operador enviou`
    sobreviveria à vírgula, que era o falso positivo procurado.

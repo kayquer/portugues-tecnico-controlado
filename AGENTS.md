@@ -114,9 +114,11 @@ Goal loops no formato do [learn-harness-engineering](https://github.com/walkingl
 | Loop | Critério mecânico | Estado |
 |---|---|---|
 | `loops/goal-cobertura.md` | `./init.sh --cobertura` sai 0 | fechado (8/8, 8/8) |
-| `loops/goal-falso-positivo.md` | `PTC_ADVERSARIAL=1 ./init.sh --cobertura` sai 0 | aberto |
+| `loops/goal-falso-positivo.md` | `PTC_ADVERSARIAL=1 ./init.sh --cobertura` sai 0 | fechado (8/8, em 8 rodadas) |
 
 Sem julgamento, sem "acho que já deu". O segundo existe porque o primeiro fechou com contra-testes escritos **junto com a regra** — todos testam a leitura legítima óbvia, e nenhum testa português correto que *se parece* com a violação. Por isso `PTC_ADVERSARIAL` não conta os antigos: PTC-6 tem 4 contra-testes e sairia "pronta" sem uma linha nova.
+
+As 8 rodadas fecharam com **zero achado de falso positivo**, e o subproduto vale mais que o resultado: duas contradições internas do prompt foram medidas (`talvez` na rodada 3, expansão de sigla na rodada 6) e **nenhuma das duas foi consertada**, porque nenhuma oscila. `apenas` e `executar` foram, porque oscilavam. **Contradição textual não é achado — oscilação é.**
 
 Estado entre rodadas em `loops/loop-state.md`. Para um objetivo novo, escreva outro `goal-*.md` — cada um precisa de objetivo, verificação executável, condição de parada e restrições.
 
@@ -192,7 +194,7 @@ Casos com histórico de instabilidade estão registrados em `loops/loop-state.md
 
 ### Custo e falso alarme
 
-Cada caso é **até `PTC_TENTATIVAS` (3) chamadas** ao Claude, e a suite tem 12 casos — 12 chamadas quando tudo passa de primeira, mais uma por retentativa. O default é `sonnet`: Opus a cada rodada fica caro, e a asserção é sobre qual regra disparou, não sobre a qualidade da prosa.
+Cada caso é **até `PTC_TENTATIVAS` (3) chamadas** ao Claude, e a suite tem 22 casos — 22 chamadas quando tudo passa de primeira, mais uma por retentativa. O default é `sonnet`: Opus a cada rodada fica caro, e a asserção é sobre qual regra disparou, não sobre a qualidade da prosa.
 
 Durante o desenvolvimento, prefira `./init.sh <caso>` e deixe a suite inteira para o fim. `--cobertura` é grátis (não chama a API).
 
