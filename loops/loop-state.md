@@ -6,19 +6,17 @@ começar a próxima. As seções estão em ordem cronológica; a última é a at
 ## Estado atual
 
 - **Objetivo aberto:** `loops/goal-falso-positivo.md` — contra-teste adversarial
-- **Adversarial:** 4/8 após as rodadas 1-4 (PTC-4, PTC-2, PTC-3, PTC-7) — faltam PTC-1, 5, 6, 8
-- **Legibilidade:** `caso-01` `flesch-min: 50` (corrigido — o `pal-frase-max: 11`
-  original falhava ~28%), `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12`
-  (em observação, margem fina)
-- **Abertos:** `caso-14` saiu `FLAKY` uma vez na suite da rodada 2 — uma
-  ocorrência não é achado, mas se repetir, meça. O `caso-01` foi explicado e
-  corrigido.
+- **Adversarial:** 5/8 após as rodadas 1-5 (PTC-4, PTC-2, PTC-3, PTC-7, PTC-8) —
+  faltam PTC-1, PTC-5, PTC-6
 - **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
-- **Suite:** 14 casos · 14/14, exit 0, zero `FLAKY` (2026-08-16)
-- **Legibilidade:** 4ª asserção, 3 casos com limiar calibrado — `caso-01`
-  `pal-frase-max: 11`, `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12`
-  (medidos 5× em 2026-08-16; `caso-03` e `caso-12` reprovados na medição)
-- **Abertos:** nenhum achado de regra
+- **Suite:** 19 casos (2026-08-16)
+- **Legibilidade:** 4ª asserção. Limiares calibrados: `caso-01` `flesch-min: 50`,
+  `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12` (este em observação —
+  margem 1,3 contra espalhamento de 6,1). `caso-03` e `caso-12` foram reprovados
+  na medição; o `pal-frase-max: 11` original do `caso-01` falhava ~28% e saiu.
+- **Abertos:** um achado **de harness**, não de regra — `FLAKY` não imprime motivo,
+  então soluço de API e falha de asserção saem idênticos. Conserto proposto na
+  seção do `caso-14`. Nenhum achado de regra aberto.
 
 ## Rodadas — goal-cobertura
 
@@ -645,14 +643,110 @@ frase, então ela mede `1,10,2`. Não afeta asserção nenhuma aqui — as ânco
 substring do texto cru —, mas **não ponha `flesch-min` nem `pal-frase-max` neste
 caso**.
 
+### Achado aberto — `FLAKY` não é diagnosticável, e isso custou uma investigação
+
+O `caso-14` saiu `FLAKY` em duas suites (rodadas 2 e 4). Medido 5× com
+`PTC_TENTATIVAS=1`: **5/5 PASS.**
+
+A hipótese registrada antes da medição estava **errada**, e vale guardar o erro: o
+`caso-14` empilha quatro decisões de desambiguação de sentido (`suportar` de
+carga, `sensível` de dado, `atualmente` de tempo, `executar` de objeto concreto),
+cada uma numa entrada do léxico com divisão "corte este sentido / mantenha
+aquele". Parecia fragilidade estrutural — quatro julgamentos independentes numa
+asserção só, ~81% de acerto composto se cada um acerta 95%. Os quatro
+sobreviveram nas cinco rodadas.
+
+O que resta: 2 flakies em suites de **18 chamadas seguidas**, 0 em rodadas
+isoladas. Nesta mesma sessão houve erro de API por limite de taxa, com medições
+voltando vazias. `rodar()` devolvendo `None` conta como tentativa falha, a
+retentativa passa, e sai `FLAKY`. **Provável infra, não skill.**
+
+**O achado real é do harness:** `FLAKY` não imprime detalhe — só `FAIL` imprime.
+Então falha de asserção e soluço de API saem idênticas na tela, e a única forma de
+separar é remedir o caso isolado, o que custa 5 chamadas e só responde depois. Num
+gate de 18 chamadas sequenciais, falha transitória é esperada, e hoje ela se
+disfarça de instabilidade da skill.
+
+Conserto proposto (**outra sessão** — `verify.py` está fora do escopo deste loop):
+`veredito()` já sabe por que cada tentativa falhou; basta guardar o motivo da
+primeira falha e imprimi-lo na linha `FLAKY`, como já se faz em `FAIL`. Distinguir
+`sem resposta do modelo` de `corrigiu indevidamente: X` transforma cada flaky de
+investigação em leitura.
+
+Enquanto isso não existe: **flaky que não reproduz isolado 5/5 é infra**, e não
+deve gerar conserto na skill nem no caso.
+
+### Rodada 5 — PTC-8, o hífen que fica (2026-08-16)
+
+Adversarial 4/8 → **5/8**. `caso-adv-8-hifen-que-fica.md`, verde de primeira. Sem
+achado.
+
+O `caso-04` já era contra-teste da PTC-8, mas com **convenção de estilo** —
+`front-end`, `data center`, `e-mail`. São palavras que a regra deixa em paz por
+decisão declarada ("O que NÃO é erro"), não por mecânica de hífen. A mecânica em
+si nunca tinha sido atacada.
+
+Três formas corretas caem no mesmo gatilho superficial (prefixo + palavra em
+`r`/`s`) por motivos **opostos**:
+
+| Forma | Por que está certa |
+|---|---|
+| `sub-rede` | prefixo termina em consoante → hífen fica |
+| `microsserviços` | prefixo termina em vogal → dobra o `s`, sem hífen |
+| `pós-processamento` | prefixo tônico e acentuado → hífen sempre |
+
+`sub-rede` é o item perigoso e é termo de rede de runbook real: aplicar a dobra
+ali produz `subrrede`, que não existe. As três juntas obrigam a regra a decidir
+três vezes em direções diferentes na mesma entrada.
+
+`infraestrutura` entra como quarto termo e fecha um par com o lado positivo: o
+`caso-01` planta `infra-estrutura` **errada** de propósito; aqui ela está certa e
+não pode ser tocada.
+
+Descartei `pré-requisito`: `prerrequisito` também é forma atestada, então a
+asserção seria moeda ao ar. Adversarial precisa de item onde só uma grafia está
+certa — mesma disciplina que tirou `a qualquer momento` da rodada 3 e
+`plano de reversão` da rodada 1.
+
 ## Como retomar
 
+Instale o harness uma vez — ele deixou de ser stdlib puro:
+
 ```bash
-PTC_ADVERSARIAL=1 ./init.sh --cobertura   # o gap aberto: 0/8 (grátis)
-./init.sh --cobertura                      # matriz antiga: 8/8 e 8/8 (grátis)
-python3 tests/test_runner.py               # checks do runner (grátis)
-./init.sh                                  # a suite continua verde?
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+```
+
+Depois, o que é grátis primeiro:
+
+```bash
+PTC_ADVERSARIAL=1 ./init.sh --cobertura   # o gap aberto: 5/8 (grátis)
+./init.sh --cobertura                      # matriz fechada: 8/8 e 8/8 (grátis)
+.venv/bin/python3 tests/test_runner.py     # 15 checks do runner (grátis)
+./init.sh                                  # 19 casos — última rodada: 19/19, exit 0
 ```
 
 O loop aberto é `loops/goal-falso-positivo.md` — rode com `/loop` sem intervalo.
 O `goal-cobertura.md` está fechado; não reabra.
+
+**Faltam três regras no adversarial: PTC-1, PTC-5, PTC-6.** Terrenos que o goal
+file sugere e que ninguém testou ainda:
+
+| Regra | Português correto que pode ser confundido com a violação |
+|---|---|
+| PTC-1 | `-se` pronominal inerente em cadeia (`o processo se encerra e se registra`) |
+| PTC-5 | cadeia de `de` com termo lexicalizado — cada um conta como **um** nó (`chave de API do banco de dados` são 2, não 4) |
+| PTC-6 | sigla consagrada que não pede expansão (`CPU`, `URL`, `HTTP`) |
+
+Duas disciplinas que as cinco rodadas confirmaram e que economizam rodada perdida:
+
+1. **Escolha item onde só uma forma está certa.** Foram descartados
+   `plano de reversão` (rodada 1), `a qualquer momento` (rodada 3) e
+   `pré-requisito` (rodada 5) — todos discutíveis, e asserção discutível não
+   decide nada.
+2. **A âncora tem de morrer no erro que ela deveria pegar.** Na rodada 2, a
+   âncora virou `arquivos que o operador` porque `que o operador enviou`
+   sobreviveria à vírgula, que era o falso positivo procurado.
+
+E uma dívida de harness registrada acima: `FLAKY` não imprime motivo, então
+soluço de API se disfarça de instabilidade da skill. Enquanto isso não muda,
+**flaky que não reproduz isolado 5/5 é infra** — não gere conserto por causa dele.
