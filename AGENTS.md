@@ -148,7 +148,7 @@ O runner repete cada caso até `PTC_TENTATIVAS` (3) antes de reprovar, porque a 
 | Estado | Significado |
 |---|---|
 | `PASS` | passou de primeira |
-| `FLAKY` | passou numa retentativa — conta como ok, mas aparece destacado |
+| `FLAKY` | passou numa retentativa — conta como ok, mas aparece destacado **com o motivo da falha que ele escondeu** |
 | `ESCALOU` | falhou as 3 em `PTC_MODELO`, passou em `PTC_MODELO_ESCALA` (opus) |
 | `FAIL` | falhou as 3 tentativas **e** a escalada — quebra real |
 
@@ -167,7 +167,9 @@ escalar ali gastaria o modelo caro e ainda etiquetaria um FAIL legítimo de
 legibilidade como problema de citação. Falha **mista** (rótulo + métrica) escala
 normalmente, e a métrica é reavaliada na saída do opus junto com o resto.
 
-**Flaky recorrente merece investigação**, não tolerância. Aponta para uma das causas abaixo — e a linha de detalhe impressa abaixo do `FAIL` diz qual:
+**Flaky recorrente merece investigação**, não tolerância. Aponta para uma das causas abaixo — e a linha de detalhe impressa abaixo do `FAIL` **e do `FLAKY`** diz qual.
+
+O `FLAKY` só passou a dizer isso em 2026-08-16. Antes, ele imprimia a contagem de tentativas e nada mais: falha de asserção e erro de API saíam idênticos na tela, e a única forma de separar era remedir o caso isolado com `PTC_TENTATIVAS=1` — 5 chamadas que respondiam depois, no meio de outra tarefa. Numa suite de 22 chamadas sequenciais, falha transitória é esperada, e ela se disfarçava de instabilidade da skill. O que o runner guarda é o motivo da **primeira falha diagnosticável**; timeout deixa a lista vazia de propósito, para continuar imprimindo "sem resposta do modelo" em vez de inventar uma asserção que não quebrou.
 
 | Detalhe impresso | Causa | Conserto |
 |---|---|---|
@@ -178,7 +180,7 @@ normalmente, e a métrica é reavaliada na saída do opus junto com o resto.
 | `métrica: flesch X < Y` | **limiar chutado**, ou regressão real de legibilidade | rode `--metricas` 5×; se nunca fecha 5/5, o limiar estava chutado — baixe ou tire a chave |
 | `métrica: não achei o 'Texto final:'` | **formato** — a skill mudou o rótulo da seção final | conserte `INICIO_TEXTO_FINAL` ou o formato de saída da skill, **nunca** o limiar |
 | `métrica: texto curto demais` | **caso curto** — não há palavra que sustente a medida | tire o limiar deste caso |
-| `sem resposta do modelo` | **infra** — timeout ou erro da API | nenhum; rode de novo |
+| `sem resposta do modelo` | **infra** — timeout, erro da API ou limite de taxa | nenhum; espere e rode de novo |
 
 **Âncora frágil, caso real:** `caso-11` entrava com `Pacote enviado às 14h30` e ancorava `agente enviou` — 3/5. Com marca de tempo, `O agente envia` e `O agente enviou` são as duas corretas, porque a entrada não diz se aquilo é log de evento passado ou comportamento recorrente. Trocado por `ao servidor`, que força a leitura de ação em presente: 5/5. O conserto foi na entrada; encurtar a âncora teria escondido a ambiguidade em vez de removê-la.
 
@@ -189,6 +191,8 @@ normalmente, e a métrica é reavaliada na saída do opus junto com o resto.
 **Regra ambígua, caso real:** `apenas` estava nos dois lados da skill — `SKILL.md` (PTC-5) prescrevia `apenas um teste` como a forma correta do sentido anteposto, e `lexico.md` mandava cortar `apenas` como minimizador. Os dois arquivos vão concatenados no mesmo prompt, então o modelo decidia diferente a cada rodada. A entrada do léxico foi dividida em hedge (`é apenas um bug`, corte) e quantidade (`apenas um teste`, mantenha).
 
 **Infra:** `FAIL` sem `faltou` e sem `corrigiu` significa que nunca houve resposta para avaliar. Continua contando como falha — caso não verificado não é caso verde — mas não é regressão. Suba `PTC_TIMEOUT` se for recorrente.
+
+**Limite de taxa é o modo de falha da suite inteira, não de um caso.** Uma rodada completa são 22+ chamadas sequenciais; somada a medições no mesmo dia, ela bate no teto e daí para frente **todos** os casos saem em `sem resposta do modelo`. Aconteceu em 2026-08-16: 4/22, com os 18 restantes idênticos. O sinal é a uniformidade — regressão de skill não derruba 18 casos diferentes na mesma linha. Espere e rode de novo; não conserte nada. Orce isso antes de uma sessão que mede muito.
 
 Casos com histórico de instabilidade estão registrados em `loops/loop-state.md`.
 

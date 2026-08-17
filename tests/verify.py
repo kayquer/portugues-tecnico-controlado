@@ -222,7 +222,13 @@ def rodar(skill, caso, modelo=MODELO):
     except subprocess.TimeoutExpired:
         return None
     if r.returncode != 0:
-        print(f"\n    {CINZA}{r.stderr.strip()[:200]}{RESET}", file=sys.stderr)
+        # Antes daqui saía só `r.stderr`, e o CLI sai != 0 **sem stderr** quando
+        # bate limite de taxa: a suite de 2026-08-16 imprimiu 18 linhas cinzas
+        # vazias e nenhuma dizia o que tinha acontecido. Mesma família do FLAKY
+        # sem motivo — o runner falhava e não dizia por quê.
+        detalhe = r.stderr.strip() or r.stdout.strip() or "sem stderr e sem stdout"
+        print(f"\n    {CINZA}claude saiu {r.returncode}: {detalhe[:200]}{RESET}",
+              file=sys.stderr)
         return None
     return r.stdout
 
@@ -316,6 +322,13 @@ def veredito(skill, caso):
     """
     falhas = []
 
+    # Motivo da primeira falha **diagnosticável**, guardado para a linha `FLAKY`.
+    # Sem ele, falha de asserção e soluço de API saem idênticos na tela e separar
+    # as duas exigia remedir o caso isolado 5× (loop-state, rodada 4). Timeout
+    # deixa a lista vazia de propósito: vazio já significa "não houve resposta",
+    # e é o que faz o runner imprimir isso em vez de inventar uma asserção.
+    primeira = []
+
     # Output de LLM oscila: um caso pode falhar numa rodada e passar na
     # seguinte. Sem retry, a suite acusa regressão que não existe — e pior,
     # cada rodada acusa um caso diferente. Repetir separa quebra de ruído.
@@ -326,7 +339,8 @@ def veredito(skill, caso):
             continue
         ok, falhas = avaliar(caso, saida)
         if ok:
-            return ("PASS" if tentativa == 1 else "FLAKY"), tentativa, []
+            return ("PASS" if tentativa == 1 else "FLAKY"), tentativa, primeira
+        primeira = primeira or falhas
 
     # Modelo menor às vezes aplica a correção e não cita a regra na tabela, e a
     # asserção lê a tabela. Antes isto era passo manual do AGENTS.md, e
@@ -380,6 +394,26 @@ def metricas(skill, casos):
     return 0
 
 
+def detalhar(falhas):
+    """Imprime por que o caso falhou. Serve `FAIL` e `FLAKY`.
+
+    `FLAKY` sem motivo custou uma investigação inteira (loop-state, rodada 4):
+    na tela, asserção que quebrou e erro de API saíam idênticos, e separar as
+    duas exigia remedir o caso isolado — 5 chamadas que só respondiam depois.
+    """
+    for rotulo in ROTULOS:
+        itens = [d for r, d in falhas if r == rotulo]
+        if itens:
+            print(f"    {rotulo + ':':<24}{', '.join(itens)}")
+    # Lista vazia: nunca houve resposta para avaliar. Continua contando como
+    # falha — caso não verificado não é caso verde —, mas dizer qual das duas
+    # coisas aconteceu é o que separa quebra da skill de ruído de infra.
+    # Sem esta linha as duas saem idênticas na tela.
+    if not falhas:
+        print(f"    {CINZA}sem resposta do modelo (timeout de {TIMEOUT}s ou "
+              f"erro da API) — não é regressão da skill{RESET}")
+
+
 def main():
     casos = sorted((AQUI / "casos").glob("*.md"))
     if not casos:
@@ -418,21 +452,12 @@ def main():
         elif estado == "FLAKY":
             instaveis += 1
             print(f"{AMARELO}FLAKY{RESET} (passou na {tentativa}ª de {TENTATIVAS})")
+            detalhar(falhas)
         else:
             reprovados += 1
             com_metrica += any(r == "métrica" for r, _ in falhas)
             print(f"{VERMELHO}FAIL{RESET}  ({TENTATIVAS} tentativas)")
-            for rotulo in ROTULOS:
-                itens = [d for r, d in falhas if r == rotulo]
-                if itens:
-                    print(f"    {rotulo + ':':<24}{', '.join(itens)}")
-            # Lista vazia: nunca houve resposta para avaliar. Continua FAIL —
-            # caso não verificado não é caso verde —, mas dizer qual das duas
-            # coisas aconteceu é o que separa quebra da skill de ruído de infra.
-            # Sem esta linha as duas saem idênticas na tela.
-            if not falhas:
-                print(f"    {CINZA}sem resposta do modelo (timeout de {TIMEOUT}s ou "
-                      f"erro da API) — não é regressão da skill{RESET}")
+            detalhar(falhas)
 
     total = len(casos)
     print(f"\n{total - reprovados}/{total} casos ok", end="")

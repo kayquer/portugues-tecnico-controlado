@@ -14,12 +14,16 @@ Uso: python3 tests/test_runner.py
 """
 import io
 import sys
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import legibilidade  # noqa: E402
 import verify  # noqa: E402
+
+# `dublar()` troca `verify.rodar` por um fake e não desfaz. Guardado aqui, antes
+# de qualquer teste rodar, para o check do `rodar` de verdade não pegar o dublê.
+RODAR_REAL = verify.rodar
 
 
 def caso_falso(**extra):
@@ -64,11 +68,53 @@ def teste_pass():
 
 
 def teste_flaky():
+    """FLAKY carrega o motivo da falha que ele escondeu.
+
+    Sem isso, soluço de API e asserção quebrada saem idênticos na tela e a única
+    forma de separar é remedir o caso isolado 5× — que custou uma investigação
+    inteira na rodada 4 do goal-falso-positivo.
+    """
     verify.TENTATIVAS = 3
     dublar([VERMELHO, VERDE])
-    estado, tentativa, *_ = verify.veredito("skill", caso_falso())
+    estado, tentativa, falhas = verify.veredito("skill", caso_falso())
     assert estado == "FLAKY", estado
     assert tentativa == 2, tentativa
+    assert ("faltou", "PTC-1") in falhas, falhas
+
+
+def teste_flaky_por_timeout_nao_inventa_motivo():
+    """O espelho: timeout e depois PASS sai com `falhas` vazia.
+
+    Vazio é o que faz o runner imprimir "sem resposta do modelo". Preencher com
+    a última avaliação faria infra voltar a se disfarçar de regressão da skill,
+    que é exatamente o problema que o motivo impresso existe para desfazer.
+    """
+    verify.TENTATIVAS = 3
+    dublar([None, VERDE])
+    estado, _, falhas = verify.veredito("skill", caso_falso())
+    assert estado == "FLAKY", estado
+    assert falhas == [], falhas
+
+
+def teste_rodar_diz_por_que_o_cli_falhou():
+    """CLI que sai != 0 **sem stderr** imprimia uma linha cinza vazia.
+
+    É o que acontece no limite de taxa, e a suite de 2026-08-16 saiu com 18
+    delas: o runner sabia que a chamada tinha falhado e não dizia nada. Mesma
+    família do FLAKY sem motivo, e igualmente barato de consertar.
+    """
+    class CliMudo:
+        returncode, stdout, stderr = 7, "", ""
+
+    original = verify.subprocess.run
+    verify.subprocess.run = lambda *a, **k: CliMudo()
+    try:
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            assert RODAR_REAL("skill", caso_falso()) is None
+    finally:
+        verify.subprocess.run = original
+    assert "7" in buf.getvalue(), buf.getvalue()
 
 
 def teste_escalou():

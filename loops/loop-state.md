@@ -815,6 +815,95 @@ decidia diferente a cada rodada. `talvez` e a expansão de sigla estão escritos
 a mesma incoerência e deram 5/5 nos dois. Achar a contradição por leitura é barato
 e não decide nada; só a medição decide.
 
+## Sessão seguinte — os dois consertos com evidência medida (2026-08-16)
+
+Sessão de conserto, não rodada de loop. Dos quatro candidatos levantados quando o
+loop fechou, só dois tinham medição atrás; os outros dois ficaram de fora **de
+propósito**, pela regra que a própria série produziu.
+
+### 1. `FLAKY` passou a dizer o motivo
+
+Dívida registrada na rodada 4, paga aqui. `veredito()` guarda o motivo da primeira
+falha **diagnosticável** e o devolve na tupla; `detalhar()` imprime igual para
+`FAIL` e `FLAKY`.
+
+Timeout deixa a lista vazia de propósito: vazio já significa "não houve resposta",
+e é o que faz o runner imprimir isso em vez de inventar uma asserção que não
+quebrou. Quando a 1ª tentativa dá timeout e a 2ª quebra uma asserção, sai a
+asserção — motivo diagnosticável vale mais que ordem cronológica, e é por isso que
+a variável guarda a primeira falha *com conteúdo*, não a primeira falha.
+
+Dois checks cobrem os dois lados (`teste_flaky`, `teste_flaky_por_timeout_nao_
+inventa_motivo`), e a verificação foi por **mutação**: voltar o retorno para `[]`
+derruba o primeiro. 15 → 16 checks, ainda grátis.
+
+**O que muda no procedimento:** "flaky que não reproduz isolado 5/5 é infra"
+continua valendo, mas deixou de ser o primeiro passo. A linha do `FLAKY` agora
+separa `sem resposta do modelo` de `corrigiu indevidamente: X` na hora, e remedir
+5× só é preciso no segundo caso.
+
+### 2. "Texto final" sai sempre, mesmo sem mudança
+
+Na calibração da métrica, **1 de 5 rodadas do `caso-12` não emitiu a seção** — e um
+limiar ali teria dado FAIL por formato, não por legibilidade. A licença estava
+escrita no `Processo`: *"Se o texto já estiver conforme, diga isso"* autorizava
+responder no lugar da seção.
+
+Duas linhas no `SKILL.md`. O passo 7 manda dizer isso em "Mantido de propósito" e
+emitir o texto final idêntico ao original; "Formato de saída" declara a seção
+obrigatória, com o motivo — quem consome a saída procura o texto reescrito num
+lugar só e não pode depender de a skill ter achado alguma coisa.
+
+Asserção nova: `deve-conter: Texto final` no `caso-12`, que é onde o buraco foi
+visto. Medido **5/5** com `PTC_TENTATIVAS=1`, contra 4/5 antes.
+
+**Cuidado com essa comparação:** 5 amostras não distinguem 4/5 de 5/5, e este
+arquivo já registra uma sessão inteira perdida por tratar 5 amostras agrupadas
+como prova (o limiar do `caso-01`). O que a asserção garante não é melhora de
+taxa — é que a próxima ocorrência aparece como falha nomeada em vez de sumir.
+
+Nota de escopo: `deve-conter` é checado na saída inteira, então ele prova que a
+seção existe, não que o texto dela preste. Prosa continua por conta de `nao-marca`
+e da métrica.
+
+### 3. O runner mentia de novo, e foi o conserto 1 que mostrou
+
+A suite de validação desta sessão saiu **4/22**, com 18 casos em
+`sem resposta do modelo`. Não era regressão: foi limite de taxa depois de ~60
+chamadas no mesmo dia (rodadas, medições e duas suites completas). O motivo
+impresso pagou a fatura na primeira vez que rodou — 18 linhas idênticas dizendo
+"infra" é diagnóstico à primeira vista, e antes dele isso seria 18 `FAIL` mudos
+que pareceriam a skill ter quebrado.
+
+Mas ele expôs o buraco vizinho. Acima de cada `FAIL` saíam **três linhas cinzas
+vazias**: `rodar()` imprime `r.stderr` quando o CLI sai != 0, e no limite de taxa
+o `claude` sai != 0 **sem escrever nada em stderr**. O runner sabia que a chamada
+falhou, tinha o código de saída na mão, e imprimia string vazia.
+
+Conserto de uma linha: `stderr` → senão `stdout` → senão "sem stderr e sem
+stdout", sempre com o código de saída na frente. `teste_rodar_diz_por_que_o_cli_
+falhou` dubla `subprocess.run` com um CLI mudo e exige o código na saída;
+verificado por mutação — voltar para `r.stderr` sozinho derruba o check, e a
+mensagem de erro do assert imprime literalmente a linha cinza vazia. 16 → 17
+checks.
+
+**A lição é a mesma da rodada 4, um nível abaixo:** todo caminho de falha do
+harness precisa dizer por que falhou. Já custou uma investigação em `FLAKY` e
+saiu de graça aqui só porque o conserto anterior estava no lugar.
+
+Suite re-rodada depois de 25 minutos de pausa: **22/22, zero `FLAKY`, exit 0** —
+inclusive o `caso-01`, que tinha saído instável na rodada da manhã. Uma rodada
+não absolve instabilidade conhecida, mas fecha o diagnóstico do 4/22: era o teto
+de chamadas, não a skill.
+
+### O que ficou de fora
+
+A varredura léxico ↔ `SKILL.md` e a cláusula de fronteira do léxico continuam sem
+oscilação medida. A série de 8 rodadas mediu duas contradições textuais (`talvez`,
+expansão de sigla) e não consertou nenhuma; consertar estas duas contrariaria a
+regra que a série produziu. Ficam registradas em "Como retomar" com os termos
+concretos, para a próxima sessão escrever a asserção primeiro e decidir depois.
+
 ## Como retomar
 
 Instale o harness uma vez — ele deixou de ser stdlib puro:
@@ -837,16 +926,19 @@ PTC_ADVERSARIAL=1 ./init.sh --cobertura   # 8/8 — fechada (grátis)
 
 O que ficou candidato a próxima sessão, em ordem de evidência:
 
-| # | O que | Estado da evidência |
+| # | O que | Estado |
 |---|---|---|
-| 1 | `FLAKY` imprimir o motivo da 1ª falha em `verify.py` | dívida de harness medida, conserto já proposto na seção da rodada 4 |
-| 2 | check grátis de colisão léxico ↔ `SKILL.md` em `test_runner.py` | procedimento que só existe em prosa desde 08-12; a varredura manual acha `validar` (✅ 4× no `SKILL.md`, "congele um sentido" no léxico), `gerar` e `atualizar` sem asserção atrás |
-| 3 | `SKILL.md` sempre emitir "Texto final", mesmo sem mudança | 1 de 5 rodadas do `caso-12` não emitiu; o harness tem classe de erro só para isso |
-| 4 | onde o léxico **não** mora — cláusula de fronteira no molde da PTC-8 | preventivo: as entradas do léxico têm rótulo próprio (PTC-1, PTC-3, PTC-4) e nada diz qual citar |
+| 1 | `FLAKY` imprimir o motivo da 1ª falha | **feito** em 2026-08-16 |
+| 2 | `SKILL.md` sempre emitir "Texto final" | **feito** em 2026-08-16 |
+| — | `rodar()` dizer por que o CLI saiu != 0 | **feito** em 2026-08-16, achado pelo item 1 |
+| 3 | asserção atrás dos termos que o `SKILL.md` prescreve ✅ e o léxico manda evitar | aberto, **sem oscilação medida**. `validar` é o mais exposto: ✅ em `SKILL.md:107, 120, 123, 227` e `lexico.md:30` manda "verificar **ou** aprovar; congele um". Depois dele, `gerar` (✅ em `:76, 77`; `caso-12` protege só `é gerado`) e `atualizar` (✅ em `:56, 57`) |
+| 4 | check grátis de colisão léxico ↔ `SKILL.md` em `test_runner.py` | aberto. O procedimento existe em prosa desde 08-12 ("antes de acrescentar palavra ao léxico, procure ela no `SKILL.md`") e nunca virou código — mesmo formato do check morto da rodada 1 |
+| 5 | onde o léxico **não** mora — cláusula de fronteira no molde da PTC-8 | aberto, preventivo: as entradas do léxico carregam rótulo próprio (PTC-1, PTC-3, PTC-4) e nada diz qual citar quando a correção sai de lá |
 
-Os itens 2 e 4 são preventivos e **não** têm oscilação medida. A série de 8
-rodadas mostrou duas vezes que contradição textual sem oscilação não se conserta
-— trate-os como "escrever a asserção primeiro, decidir depois".
+Os três abertos são preventivos e **nenhum tem oscilação medida**. A série de 8
+rodadas mediu duas contradições textuais e não consertou nenhuma: escreva a
+asserção primeiro (item 3), meça 5×, e só divida o sentido no léxico se oscilar.
+O item 4 é o que torna isso barato — ele acha o próximo candidato sozinho.
 
 Duas disciplinas que as oito rodadas confirmaram e que economizam rodada perdida:
 
@@ -860,6 +952,9 @@ Duas disciplinas que as oito rodadas confirmaram e que economizam rodada perdida
    âncora virou `arquivos que o operador` porque `que o operador enviou`
    sobreviveria à vírgula, que era o falso positivo procurado.
 
-E uma dívida de harness registrada acima: `FLAKY` não imprime motivo, então
-soluço de API se disfarça de instabilidade da skill. Enquanto isso não muda,
-**flaky que não reproduz isolado 5/5 é infra** — não gere conserto por causa dele.
+E uma terceira, agora que o `FLAKY` imprime o motivo: **leia a linha antes de
+remedir.** `sem resposta do modelo` é infra e não gera conserto nenhum;
+`corrigiu indevidamente: X` é que pede as 5 rodadas com `PTC_TENTATIVAS=1`. A
+regra antiga ("flaky que não reproduz isolado 5/5 é infra") continua certa, mas
+virou o segundo passo — antes ela era o único, e custava 5 chamadas para
+responder o que agora está na tela.
