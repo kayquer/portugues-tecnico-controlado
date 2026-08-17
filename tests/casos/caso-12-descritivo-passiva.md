@@ -20,12 +20,21 @@
 
      Resolvido a favor da tabela: o teste mecânico ganhou cláusula de nível.
      Só por isso `Verifica-se` entrou em `nao-marca` e o caso passou a declarar
-     `contra-teste: PTC-1`. -->
+     `contra-teste: PTC-1`.
+
+     `deve-conter: Texto final` é regressão de formato, não de regra. Na
+     calibração da métrica (loop-state, 2026-08-16), **1 de 5 rodadas deste caso
+     não emitiu a seção** — o `Processo` do SKILL.md autorizava responder "já
+     está conforme" no lugar dela. Entrada correta é a população de maior risco
+     para esse buraco, e este caso é onde ele foi visto. O harness tem uma classe
+     de erro só para isso (`métrica: não achei o 'Texto final:'`), mas ela só
+     dispara em caso com limiar — e este não tem. -->
 # caso: contra-teste de nível — o que `descritivo` libera e `estrito` proíbe
 nivel: descritivo
 espera:
 contra-teste: PTC-1, PTC-5
 nao-marca: é gerado, tempo de resposta do serviço de fila, Verifica-se
+deve-conter: Texto final
 
 ## entrada
 O relatório é gerado ao fim de cada ciclo. Verifica-se a integridade dos arquivos antes do envio. O tempo de resposta do serviço de fila permanece abaixo de 200 ms.

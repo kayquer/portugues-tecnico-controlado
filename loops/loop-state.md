@@ -5,11 +5,11 @@ começar a próxima. As seções estão em ordem cronológica; a última é a at
 
 ## Estado atual
 
-- **Objetivo aberto:** `loops/goal-falso-positivo.md` — contra-teste adversarial
-- **Adversarial:** 5/8 após as rodadas 1-5 (PTC-4, PTC-2, PTC-3, PTC-7, PTC-8) —
-  faltam PTC-1, PTC-5, PTC-6
+- **Nenhum objetivo aberto.** Os dois goal loops fecharam.
+- **Objetivo fechado:** `loops/goal-falso-positivo.md` — adversarial 8/8 ✓ em
+  2026-08-16, depois de 8 rodadas e **zero achado de falso positivo**
 - **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
-- **Suite:** 19 casos (2026-08-16)
+- **Suite:** 22 casos (2026-08-16) — 22/22, 1 instável (`caso-01`)
 - **Legibilidade:** 4ª asserção. Limiares calibrados: `caso-01` `flesch-min: 50`,
   `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12` (este em observação —
   margem 1,3 contra espalhamento de 6,1). `caso-03` e `caso-12` foram reprovados
@@ -708,6 +708,202 @@ asserção seria moeda ao ar. Adversarial precisa de item onde só uma grafia es
 certa — mesma disciplina que tirou `a qualquer momento` da rodada 3 e
 `plano de reversão` da rodada 1.
 
+### Rodada 6 — PTC-6, sigla consagrada não pede expansão (2026-08-16)
+
+Adversarial 5/8 → **6/8**. `caso-adv-6-sigla-consagrada.md`, PASS de primeira e
+**5/5** com `PTC_TENTATIVAS=1`. Sem achado — e a medição extra existe porque este
+caso foi atrás de contradição interna, como a rodada 3:
+
+```
+SKILL.md:130    "Expanda na primeira ocorrência" — sem exceção nenhuma
+lexico.md:165   sigla que já entrou na língua dispensa expansão (CPF, PDF, URL)
+```
+
+Assinatura do `apenas` e do `executar`. E desta vez havia **dano registrado**: o
+`caso-08` perdeu a âncora `chave de API do banco de dados` porque a skill expandiu
+para `chave da Interface de Programação de Aplicações (API) do banco de dados`. Na
+época o diagnóstico parou em "asserção frágil" e a âncora foi encurtada. Ninguém
+perguntou se a expansão em si era falso positivo da PTC-6.
+
+**Resposta: não é.** 5/5 preservou `a URL do painel`, `uso de CPU` e
+`resposta HTTP`. E o `caso-08` não desmente isso — `API` **não está** na lista de
+dispensa do léxico, então expandi-la é a regra funcionando como escrita. As duas
+observações convivem.
+
+Veredito igual ao do `talvez`: contradição textual que não morde não se reescreve.
+O ganho da rodada é a asserção que passou a existir atrás da linha.
+
+Âncora com artigo e preposição de propósito (`a URL do painel`, não `URL`): a
+expansão insere o nome por extenso **antes** do parêntese, então `URL` sozinho
+sobreviveria dentro de `(URL)`. Âncora inerte é o erro da rodada 1 com outra roupa.
+
+### Rodada 7 — PTC-5, cadeia com termo lexicalizado (2026-08-16)
+
+Adversarial 6/8 → **7/8**. `caso-adv-5-cadeia-lexicalizada.md`, verde de primeira.
+Sem achado.
+
+O `caso-08` já era contra-teste da PTC-5, mas pelo bullet do **adjetivo**. O bullet
+da cadeia de `de` ≤ 2 nós nunca foi atacado: o `do banco de dados` de lá é âncora
+encurtada por acidente de expansão de sigla, não teste de contagem.
+
+Duas frases com três preposições encadeadas cada, ambas dentro do limite, porque
+termo lexicalizado conta como **um** nó (`SKILL.md:114`):
+
+| Trecho | Nós |
+|---|---|
+| a fila de mensagens no banco de dados | [fila de mensagens] + [banco de dados] = 2 |
+| a taxa de erro do ponto de montagem | [taxa de erro] + [ponto de montagem] = 2 |
+
+Quem conta preposição em vez de nó acha 3 e quebra a frase — e quebrar
+`fila de mensagens` **inventa uma entidade `fila`** que não existe no sistema. A
+âncora é a cadeia inteira: `fila de mensagens` sozinho sobreviveria à quebra.
+
+`chave de API` é o exemplo canônico deste bullet e ficou de fora de propósito — a
+PTC-6 expande a sigla e mata o substring sem a PTC-5 ter disparado. Lição do
+`caso-08`, aplicada antes de custar a rodada em vez de depois.
+
+### Rodada 8 — PTC-1, `-se` inerente em cadeia (2026-08-16)
+
+Adversarial 7/8 → **8/8, matriz fechada**. `caso-adv-1-se-inerente-em-cadeia.md`,
+verde de primeira. Sem achado.
+
+O `caso-05` tinha **um** `-se` inerente isolado, e um `se` sozinho é fácil de
+absolver. Aqui são três em cadeia, e os três reprovam o teste mecânico do
+`SKILL.md:50` por motivos diferentes: `é conectado` inverte quem age,
+`é recusado a repetir` é agramatical, `é comportado` não existe.
+
+O goal file sugeria `o processo se encerra e se registra` para este terreno.
+Descartado: `se registra` vira `é registrado` sem perder nada, então o teste
+mecânico o condena **com razão** e a asserção seria moeda ao ar. Terceira vez que
+a disciplina do item de forma única tirou um candidato, depois de
+`plano de reversão` (rodada 1) e `pré-requisito` (rodada 5).
+
+Âncoras sem o `e` da coordenação: em `estrito` a PTC-2 pode quebrar a coordenação
+com razão, e `e se recusa` morreria nessa reescrita legítima sem falso positivo
+nenhum da PTC-1 — armadilha do `caso-08`. Sujeito nulo em coordenação já é âncora
+do `caso-05`.
+
+## Objetivo fechado — `goal-falso-positivo` (2026-08-16)
+
+```
+PTC_ADVERSARIAL=1 ./init.sh --cobertura   →  8/8, exit 0
+./init.sh                                 →  22/22, exit 0
+```
+
+As duas saem 0: condição de parada 1 do goal file. **Não reabra** — para objetivo
+novo, escreva outro `goal-*.md`.
+
+Resíduo: `caso-01` saiu `FLAKY` (2ª de 3), o único da suite. É o de sempre — o caso
+mais largo, 8 regras numa entrada só. Não medido aqui, e a dívida do `FLAKY` sem
+motivo impresso continua aberta: flaky que não reproduz isolado não gera conserto.
+
+### O que as 8 rodadas somam
+
+**Zero achado de falso positivo em 8 rodadas.** Nenhuma regra atropelou português
+correto — nem a mecânica do hífen, nem a contagem de nós, nem o `-se` inerente em
+cadeia. Os achados da série foram todos de outra natureza:
+
+| Rodada | Achado | Onde morava |
+|---|---|---|
+| 1 | check escrito para um estado futuro nunca tinha rodado | `tests/test_runner.py` |
+| 4 | `FLAKY` não imprime motivo — infra se disfarça de skill | `tests/verify.py` |
+| 3 e 6 | contradição textual medida e **não** consertada | `SKILL.md` × `lexico.md` |
+
+A regra que sai da série, e que contradiz o instinto: **contradição textual não é
+achado — oscilação é.** `apenas` e `executar` foram consertados porque o modelo
+decidia diferente a cada rodada. `talvez` e a expansão de sigla estão escritos com
+a mesma incoerência e deram 5/5 nos dois. Achar a contradição por leitura é barato
+e não decide nada; só a medição decide.
+
+## Sessão seguinte — os dois consertos com evidência medida (2026-08-16)
+
+Sessão de conserto, não rodada de loop. Dos quatro candidatos levantados quando o
+loop fechou, só dois tinham medição atrás; os outros dois ficaram de fora **de
+propósito**, pela regra que a própria série produziu.
+
+### 1. `FLAKY` passou a dizer o motivo
+
+Dívida registrada na rodada 4, paga aqui. `veredito()` guarda o motivo da primeira
+falha **diagnosticável** e o devolve na tupla; `detalhar()` imprime igual para
+`FAIL` e `FLAKY`.
+
+Timeout deixa a lista vazia de propósito: vazio já significa "não houve resposta",
+e é o que faz o runner imprimir isso em vez de inventar uma asserção que não
+quebrou. Quando a 1ª tentativa dá timeout e a 2ª quebra uma asserção, sai a
+asserção — motivo diagnosticável vale mais que ordem cronológica, e é por isso que
+a variável guarda a primeira falha *com conteúdo*, não a primeira falha.
+
+Dois checks cobrem os dois lados (`teste_flaky`, `teste_flaky_por_timeout_nao_
+inventa_motivo`), e a verificação foi por **mutação**: voltar o retorno para `[]`
+derruba o primeiro. 15 → 16 checks, ainda grátis.
+
+**O que muda no procedimento:** "flaky que não reproduz isolado 5/5 é infra"
+continua valendo, mas deixou de ser o primeiro passo. A linha do `FLAKY` agora
+separa `sem resposta do modelo` de `corrigiu indevidamente: X` na hora, e remedir
+5× só é preciso no segundo caso.
+
+### 2. "Texto final" sai sempre, mesmo sem mudança
+
+Na calibração da métrica, **1 de 5 rodadas do `caso-12` não emitiu a seção** — e um
+limiar ali teria dado FAIL por formato, não por legibilidade. A licença estava
+escrita no `Processo`: *"Se o texto já estiver conforme, diga isso"* autorizava
+responder no lugar da seção.
+
+Duas linhas no `SKILL.md`. O passo 7 manda dizer isso em "Mantido de propósito" e
+emitir o texto final idêntico ao original; "Formato de saída" declara a seção
+obrigatória, com o motivo — quem consome a saída procura o texto reescrito num
+lugar só e não pode depender de a skill ter achado alguma coisa.
+
+Asserção nova: `deve-conter: Texto final` no `caso-12`, que é onde o buraco foi
+visto. Medido **5/5** com `PTC_TENTATIVAS=1`, contra 4/5 antes.
+
+**Cuidado com essa comparação:** 5 amostras não distinguem 4/5 de 5/5, e este
+arquivo já registra uma sessão inteira perdida por tratar 5 amostras agrupadas
+como prova (o limiar do `caso-01`). O que a asserção garante não é melhora de
+taxa — é que a próxima ocorrência aparece como falha nomeada em vez de sumir.
+
+Nota de escopo: `deve-conter` é checado na saída inteira, então ele prova que a
+seção existe, não que o texto dela preste. Prosa continua por conta de `nao-marca`
+e da métrica.
+
+### 3. O runner mentia de novo, e foi o conserto 1 que mostrou
+
+A suite de validação desta sessão saiu **4/22**, com 18 casos em
+`sem resposta do modelo`. Não era regressão: foi limite de taxa depois de ~60
+chamadas no mesmo dia (rodadas, medições e duas suites completas). O motivo
+impresso pagou a fatura na primeira vez que rodou — 18 linhas idênticas dizendo
+"infra" é diagnóstico à primeira vista, e antes dele isso seria 18 `FAIL` mudos
+que pareceriam a skill ter quebrado.
+
+Mas ele expôs o buraco vizinho. Acima de cada `FAIL` saíam **três linhas cinzas
+vazias**: `rodar()` imprime `r.stderr` quando o CLI sai != 0, e no limite de taxa
+o `claude` sai != 0 **sem escrever nada em stderr**. O runner sabia que a chamada
+falhou, tinha o código de saída na mão, e imprimia string vazia.
+
+Conserto de uma linha: `stderr` → senão `stdout` → senão "sem stderr e sem
+stdout", sempre com o código de saída na frente. `teste_rodar_diz_por_que_o_cli_
+falhou` dubla `subprocess.run` com um CLI mudo e exige o código na saída;
+verificado por mutação — voltar para `r.stderr` sozinho derruba o check, e a
+mensagem de erro do assert imprime literalmente a linha cinza vazia. 16 → 17
+checks.
+
+**A lição é a mesma da rodada 4, um nível abaixo:** todo caminho de falha do
+harness precisa dizer por que falhou. Já custou uma investigação em `FLAKY` e
+saiu de graça aqui só porque o conserto anterior estava no lugar.
+
+Suite re-rodada depois de 25 minutos de pausa: **22/22, zero `FLAKY`, exit 0** —
+inclusive o `caso-01`, que tinha saído instável na rodada da manhã. Uma rodada
+não absolve instabilidade conhecida, mas fecha o diagnóstico do 4/22: era o teto
+de chamadas, não a skill.
+
+### O que ficou de fora
+
+A varredura léxico ↔ `SKILL.md` e a cláusula de fronteira do léxico continuam sem
+oscilação medida. A série de 8 rodadas mediu duas contradições textuais (`talvez`,
+expansão de sigla) e não consertou nenhuma; consertar estas duas contrariaria a
+regra que a série produziu. Ficam registradas em "Como retomar" com os termos
+concretos, para a próxima sessão escrever a asserção primeiro e decidir depois.
+
 ## Como retomar
 
 Instale o harness uma vez — ele deixou de ser stdlib puro:
@@ -719,34 +915,46 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 Depois, o que é grátis primeiro:
 
 ```bash
-PTC_ADVERSARIAL=1 ./init.sh --cobertura   # o gap aberto: 5/8 (grátis)
-./init.sh --cobertura                      # matriz fechada: 8/8 e 8/8 (grátis)
+PTC_ADVERSARIAL=1 ./init.sh --cobertura   # 8/8 — fechada (grátis)
+./init.sh --cobertura                      # 8/8 e 8/8 (grátis)
 .venv/bin/python3 tests/test_runner.py     # 15 checks do runner (grátis)
-./init.sh                                  # 19 casos — última rodada: 19/19, exit 0
+./init.sh                                  # 22 casos — última rodada: 22/22, exit 0
 ```
 
-O loop aberto é `loops/goal-falso-positivo.md` — rode com `/loop` sem intervalo.
-O `goal-cobertura.md` está fechado; não reabra.
+**Os dois goal loops estão fechados. Não reabra nenhum.** Objetivo novo pede
+`goal-*.md` novo, com verificação executável e condição de parada próprias.
 
-**Faltam três regras no adversarial: PTC-1, PTC-5, PTC-6.** Terrenos que o goal
-file sugere e que ninguém testou ainda:
+O que ficou candidato a próxima sessão, em ordem de evidência:
 
-| Regra | Português correto que pode ser confundido com a violação |
-|---|---|
-| PTC-1 | `-se` pronominal inerente em cadeia (`o processo se encerra e se registra`) |
-| PTC-5 | cadeia de `de` com termo lexicalizado — cada um conta como **um** nó (`chave de API do banco de dados` são 2, não 4) |
-| PTC-6 | sigla consagrada que não pede expansão (`CPU`, `URL`, `HTTP`) |
+| # | O que | Estado |
+|---|---|---|
+| 1 | `FLAKY` imprimir o motivo da 1ª falha | **feito** em 2026-08-16 |
+| 2 | `SKILL.md` sempre emitir "Texto final" | **feito** em 2026-08-16 |
+| — | `rodar()` dizer por que o CLI saiu != 0 | **feito** em 2026-08-16, achado pelo item 1 |
+| 3 | asserção atrás dos termos que o `SKILL.md` prescreve ✅ e o léxico manda evitar | aberto, **sem oscilação medida**. `validar` é o mais exposto: ✅ em `SKILL.md:107, 120, 123, 227` e `lexico.md:30` manda "verificar **ou** aprovar; congele um". Depois dele, `gerar` (✅ em `:76, 77`; `caso-12` protege só `é gerado`) e `atualizar` (✅ em `:56, 57`) |
+| 4 | check grátis de colisão léxico ↔ `SKILL.md` em `test_runner.py` | aberto. O procedimento existe em prosa desde 08-12 ("antes de acrescentar palavra ao léxico, procure ela no `SKILL.md`") e nunca virou código — mesmo formato do check morto da rodada 1 |
+| 5 | onde o léxico **não** mora — cláusula de fronteira no molde da PTC-8 | aberto, preventivo: as entradas do léxico carregam rótulo próprio (PTC-1, PTC-3, PTC-4) e nada diz qual citar quando a correção sai de lá |
 
-Duas disciplinas que as cinco rodadas confirmaram e que economizam rodada perdida:
+Os três abertos são preventivos e **nenhum tem oscilação medida**. A série de 8
+rodadas mediu duas contradições textuais e não consertou nenhuma: escreva a
+asserção primeiro (item 3), meça 5×, e só divida o sentido no léxico se oscilar.
+O item 4 é o que torna isso barato — ele acha o próximo candidato sozinho.
+
+Duas disciplinas que as oito rodadas confirmaram e que economizam rodada perdida:
 
 1. **Escolha item onde só uma forma está certa.** Foram descartados
-   `plano de reversão` (rodada 1), `a qualquer momento` (rodada 3) e
-   `pré-requisito` (rodada 5) — todos discutíveis, e asserção discutível não
-   decide nada.
+   `plano de reversão` (rodada 1), `a qualquer momento` (rodada 3),
+   `pré-requisito` (rodada 5), `chave de API` (rodada 7, por causa da expansão de
+   sigla) e `o processo se encerra e se registra` (rodada 8, porque `se registra`
+   **é** o `-se` proibido) — todos discutíveis, e asserção discutível não decide
+   nada. Dois deles vinham sugeridos pelo próprio goal file.
 2. **A âncora tem de morrer no erro que ela deveria pegar.** Na rodada 2, a
    âncora virou `arquivos que o operador` porque `que o operador enviou`
    sobreviveria à vírgula, que era o falso positivo procurado.
 
-E uma dívida de harness registrada acima: `FLAKY` não imprime motivo, então
-soluço de API se disfarça de instabilidade da skill. Enquanto isso não muda,
-**flaky que não reproduz isolado 5/5 é infra** — não gere conserto por causa dele.
+E uma terceira, agora que o `FLAKY` imprime o motivo: **leia a linha antes de
+remedir.** `sem resposta do modelo` é infra e não gera conserto nenhum;
+`corrigiu indevidamente: X` é que pede as 5 rodadas com `PTC_TENTATIVAS=1`. A
+regra antiga ("flaky que não reproduz isolado 5/5 é infra") continua certa, mas
+virou o segundo passo — antes ela era o único, e custava 5 chamadas para
+responder o que agora está na tela.

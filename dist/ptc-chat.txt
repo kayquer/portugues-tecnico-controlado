@@ -181,7 +181,7 @@ Só se aplica sobre `estrito`. Não é um quarto nível — muda três coisas:
 4. **Varra frase a frase**, marcando qual regra PTC cada trecho viola.
 5. **Reescreva cada trecho marcado**, preservando o sentido exato. Se a reescrita fosse custar precisão — uma condição de segurança, um qualificador de escopo, um número — **mantenha o texto longo e sinalize** em vez de simplificar em silêncio.
 6. **Consulte as referências** quando a dúvida for de grafia (a versão completa desta skill) ou de palavra (a seção "Léxico controlado PT-BR"). Não chute grafia.
-7. **Se o texto já estiver conforme, diga isso.** Não force mudança em texto que já está bom.
+7. **Se o texto já estiver conforme, diga isso** em "Mantido de propósito" — e emita o "Texto final" mesmo assim, idêntico ao original. Não force mudança em texto que já está bom.
 
 ## Formato de saída
 
@@ -199,6 +199,8 @@ Só se aplica sobre `estrito`. Não é um quarto nível — muda três coisas:
 
 **Mantido de propósito:** [o que não foi simplificado e por quê]
 ```
+
+**A seção "Texto final" sai sempre**, inclusive quando nada mudou — nesse caso, repita o original. Quem consome a saída (uma pessoa aplicando o procedimento, um script, outro agente) procura o texto reescrito num lugar só, e não pode depender de você ter achado alguma coisa. Tabela vazia é resposta legítima; saída sem texto final não é.
 
 No modo bilíngue, acrescente a tabela de proposições e — se o linter reverso disparou — a lista de ambiguidades que a fonte teve que resolver. Ver a versão completa desta skill.
 
