@@ -39,46 +39,90 @@ Saída:
 >
 > **Mantido de propósito:** `deploy`, empréstimo consagrado sem tradução fixada no glossário.
 
-O ganho não está no texto ficar mais curto. Está em `deve-se verificar` virar uma ordem para quem lê, e em `1.5 GB` parar de significar mil e quinhentos.
+**Medido:** 12,3 → **7,5** palavras por frase · Flesch-PT 74,0 → 74,8.
+
+O número que se move é o primeiro, e o segundo quase não sai do lugar — o ganho aqui não é o texto ficar mais fácil, é `deve-se verificar` virar uma ordem para quem lê e `1.5 GB` parar de significar mil e quinhentos. Os dois números saem de [`tests/legibilidade.py`](tests/legibilidade.py), a 4ª asserção do harness, e ela mede inchaço — não fidelidade nem repetição.
 
 ### 2. Comunicado interno, nível `leve`
 
-Rigor de runbook em comunicado produz texto robótico. Esse é o erro clássico de quem adota linguagem controlada, e o motivo dos três níveis. O mesmo texto no nível `leve` recebe duas correções, e só:
+Rigor de runbook em comunicado produz texto robótico. Esse é o erro clássico de quem adota linguagem controlada, e o motivo dos três níveis.
 
-```diff
-  Pessoal, informamos que na próxima segunda-feira será realizada a migração do servidor.
-- O mesmo ficará indisponível das 22h às 02h.
-+ O servidor ficará indisponível das 22h às 02h.
-- Estimamos que aproximadamente 1,000 usuários serão impactados.
-+ Estimamos que aproximadamente 1.000 usuários serão impactados.
-  Solicitamos que todos efetuem o logout antes do horário.
+Entrada:
+
+```
+Pessoal, informamos que na próxima segunda-feira será realizada a migração do
+servidor. O mesmo ficará indisponível das 22h às 02h. Estimamos que
+aproximadamente 1,000 usuários serão impactados. Solicitamos que todos efetuem
+o logout antes do horário.
 ```
 
-`informamos`, `solicitamos` e `efetuem o logout` violariam PTC-4 e PTC-6 em `estrito`. O nível `leve` preserva os três de propósito: o tom permanece.
+Saída:
+
+> **Nível:** leve · **Destinatário:** humano
+>
+> | Regra | Original | Reescrito |
+> |---|---|---|
+> | PTC-1 (`o mesmo`) | `O mesmo ficará indisponível` | `O servidor ficará indisponível` |
+> | PTC-7 (milhar) | `1,000 usuários` | `1.000 usuários` |
+>
+> **Texto final:**
+> Pessoal, informamos que na próxima segunda-feira será realizada a migração do servidor. O servidor ficará indisponível das 22h às 02h. Estimamos que aproximadamente 1.000 usuários serão impactados. Solicitamos que todos efetuem o logout antes do horário.
+>
+> **Mantido de propósito:** `informamos`, `Solicitamos` e `efetuem o logout` são verbo-suporte e léxico burocrático — PTC-4 e PTC-6 ficam **dispensadas** em `leve`. `será realizada` idem: voz passiva é livre neste nível.
+
+**Medido:** 9,0 → 9,0 palavras por frase · Flesch-PT 35,3 → **32,9**.
+
+A métrica não se move — e neste nível é isso que se espera dela, porque as regras que a moveriam estão dispensadas. Duas correções, e só: as outras quatro violações ficam de propósito, e são elas que seguram o tom. `1,000` sai porque PTC-1, PTC-7 e PTC-8 nunca relaxam — milhar à americana num texto em português é erro de ordem de grandeza, e ele não encolhe porque o comunicado é informal.
 
 ### 3. Saída para agente, flag `destinatário: agente`
 
-Particípio isolado é o pior caso quando o consumidor é um modelo, porque a mesma string serve para evento e para estado:
+Particípio isolado é o pior caso quando o consumidor é um modelo, porque a mesma string serve para evento e para estado.
 
-```diff
-- Arquivo enviado.                          # evento concluído ou propriedade do estado?
-+ O agente enviou o arquivo.                # evento
-+ O arquivo está no estado ENVIADO.         # propriedade
+Entrada:
+
 ```
+Arquivo enviado.
+```
+
+Saída:
+
+> **Nível:** estrito · **Destinatário:** agente
+>
+> | Regra | Original | Reescrito |
+> |---|---|---|
+> | Flag agente (status é sujeito + verbo finito) | `Arquivo enviado.` | `O agente enviou o arquivo.` |
+>
+> **Texto final:**
+> O agente enviou o arquivo.
+>
+> **Mantido de propósito:** `Arquivo enviado.` lê como evento concluído **e** como propriedade do estado, e a entrada não decide qual. Assumido evento. Se for estado, a forma é `O arquivo está no estado ENVIADO.` — a skill declara a inferência em vez de escolher em silêncio.
+
+A regra não tem número PTC próprio: pela tabela de violações, este caso é indistinguível de um PTC-1 comum. A flag muda mais duas coisas, e a segunda é a que importa aqui — **nenhuma anáfora atravessa frase**, porque o consumidor pode truncar a saída no meio.
 
 ### 4. Par EN/PT, com o português achando o buraco no inglês
 
+Entrada:
+
 ```
-EN fonte:  The report should be sent after validation.
-
-           PTC-1 pergunta: quem envia?
-           PTC-3 pergunta: "should" é obrigação ou expectativa?
-
-EN corrigido:  The scheduler sends the report after the gateway validates the token.
-PT derivado:   O agendador envia o relatório depois que o gateway valida o token.
+The report should be sent after validation.
 ```
 
-O inglês não obriga a declarar o ator na voz passiva. O português obriga. Quando uma regra do PT exige informação que o EN não tinha, o problema é ambiguidade na fonte, não na tradução. Detalhe do pipeline em [Modo bilíngue](#modo-bilíngue).
+Saída:
+
+> **Fonte:** inglês *(o idioma do input)* · **Modo:** bilíngue
+>
+> | Regra do PT | Original (EN) | Corrigido na fonte (EN) |
+> |---|---|---|
+> | PTC-1 (quem faz, aparece) | `The report should be sent` — quem envia? | `The scheduler sends the report` |
+> | PTC-3 (modal unívoco) | `should` — obrigação ou expectativa? | presente factual: `sends` |
+> | PTC-1 (nominalização sem ator) | `after validation` — quem valida, e o quê? | `after the gateway validates the token` |
+>
+> **Texto final (EN):** The scheduler sends the report after the gateway validates the token.
+> **Texto final (PT):** O agendador envia o relatório depois que o gateway valida o token.
+>
+> **Ambiguidades resolvidas na fonte:** 3. As três já estavam no inglês original — nenhuma foi criada pela tradução.
+
+Repare na coluna do meio: as perguntas são do **português**, e as três correções entraram no **inglês**. O inglês não obriga a declarar o ator na voz passiva; o português obriga. Quando uma regra do PT exige informação que o EN não tinha, o problema é ambiguidade na fonte, e é o único mecanismo que impede o tradutor de inventar o ator. Detalhe do pipeline em [Modo bilíngue](#modo-bilíngue).
 
 ---
 
@@ -154,16 +198,13 @@ PTC-1 a PTC-5 tratam de **desambiguação** e exigem julgamento. PTC-6 a PTC-8 t
 | **PTC-7** | Formato de número, data e unidade | Vírgula decimal em PT. Datas em ISO 8601 nos dois idiomas. |
 | **PTC-8** | Ortografia PT-BR vigente | Acordo de 1990, obrigatório no Brasil desde 2016-01-01. |
 
-```diff
-- Envia o e-mail e atualiza o status.
-+ O serviço envia o e-mail. O worker atualiza o status.        # PTC-1
+Três delas, em uma linha cada:
 
-- O processo deve terminar em 5 minutos.
-+ O processo termina em até 5 minutos.                         # PTC-3
-
-- a validação do cadastro do cliente do contrato
-+ Valide o cadastro. Esse cadastro pertence ao cliente.        # PTC-5
-```
+| Regra | Original | Reescrito |
+|---|---|---|
+| **PTC-1** | `Envia o e-mail e atualiza o status.` | `O serviço envia o e-mail. O worker atualiza o status.` |
+| **PTC-3** | `O processo deve terminar em 5 minutos.` | `O processo termina em até 5 minutos.` |
+| **PTC-5** | `a validação do cadastro do cliente do contrato` | `Valide o cadastro. Esse cadastro pertence ao cliente do contrato.` |
 
 A PTC-8 é higiene, não o ponto da skill: o Acordo de 1990 é regra fechada, e um corretor resolve boa parte dele. Fica porque um caso concentra quase todo o erro em texto de TI — prefixo terminado em vogal + palavra começada por `r` ou `s` junta e dobra a consoante (`micro-serviço` → **microsserviço**, `auto-serviço` → **autosserviço**, `anti-racismo` → **antirracismo**). O resto do Acordo, a acentuação e as armadilhas de vocabulário técnico ficam em [`references/ortografia-ptbr.md`](references/ortografia-ptbr.md), carregado sob demanda.
 
@@ -206,7 +247,11 @@ Atua sobre `estrito` e muda três coisas:
 2. A skill traduz **o texto já controlado**, nunca o original bruto.
 3. A skill aplica as regras da língua alvo só onde elas não alterem a proposição.
 
-O caminho `PT → EN → PT` nunca acontece: cada tradução reintroduz a ambiguidade que o controle acabou de remover. O risco maior nem é esse. É a **normalização divergente**, quando alguém normaliza os dois idiomas em paralelo a partir do original bruto: cada conjunto de regras puxa para um lado e as duas versões passam a afirmar coisas diferentes.
+<p align="center">
+  <img src="docs/assets/pipeline-bilingue.svg" alt="O texto original é reescrito na própria língua fonte, e esse texto vira a verdade. O texto já controlado é então traduzido, e as regras da língua alvo só se aplicam onde não alterem a proposição. Quando uma regra do alvo pede informação que a fonte não tinha, uma aresta de retorno — o linter reverso — volta à fonte: corrige o original, não a tradução. Dois caminhos nunca acontecem: o round-trip PT para EN para PT, e normalizar os dois idiomas em paralelo a partir do original bruto." width="860">
+</p>
+
+A aresta de retorno é a parte que não cabe em prosa, e é ela que faz o desenho valer. O caminho `PT → EN → PT` nunca acontece: cada tradução reintroduz a ambiguidade que o controle acabou de remover. O risco maior nem é esse. É a **normalização divergente**, quando alguém normaliza os dois idiomas em paralelo a partir do original bruto: cada conjunto de regras puxa para um lado e as duas versões passam a afirmar coisas diferentes.
 
 Se no passo 3 uma regra do português exigir informação que o inglês não tinha, a skill volta ao passo 1 e corrige o inglês. Esse é o único mecanismo que impede o tradutor de inventar o ator.
 

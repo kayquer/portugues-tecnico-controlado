@@ -14,9 +14,11 @@ começar a próxima. As seções estão em ordem cronológica; a última é a at
   `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12` (este em observação —
   margem 1,3 contra espalhamento de 6,1). `caso-03` e `caso-12` foram reprovados
   na medição; o `pal-frase-max: 11` original do `caso-01` falhava ~28% e saiu.
-- **Abertos:** um achado **de harness**, não de regra — `FLAKY` não imprime motivo,
-  então soluço de API e falha de asserção saem idênticos. Conserto proposto na
-  seção do `caso-14`. Nenhum achado de regra aberto.
+- **Colisões léxico ↔ `SKILL.md`:** 5, travadas em `COLISOES` (`test_runner.py`)
+  desde 2026-08-17 — 3 reais (`validar`, `gerar`, `atualizar`) e 2 artefatos de
+  granularidade de linha. Nenhuma tem oscilação medida; ver item 3.
+- **Abertos:** nenhum achado de regra. Os itens 3 e 5 da lista de retomada são
+  preventivos.
 
 ## Rodadas — goal-cobertura
 
@@ -904,6 +906,110 @@ expansão de sigla) e não consertou nenhuma; consertar estas duas contrariaria 
 regra que a série produziu. Ficam registradas em "Como retomar" com os termos
 concretos, para a próxima sessão escrever a asserção primeiro e decidir depois.
 
+## Sessão seguinte — o item 4, e o que ele mediu de passagem (2026-08-17)
+
+Sessão de harness. O item 4 da lista de retomada era o procedimento escrito em
+prosa desde 08-12 — *"antes de acrescentar palavra ao léxico, procure ela no
+`SKILL.md`"* — que nunca tinha virado código. Mesmo formato do check morto da
+rodada 1: a intenção existia no arquivo e não existia em lugar nenhum que falhe.
+
+### O que a varredura achou
+
+`teste_colisao_lexico_skill` cruza a coluna "Evite" do `lexico.md` (93 termos)
+com as linhas que têm ✅ no `SKILL.md`. **5 batem:**
+
+| Termo | Veredito |
+|---|---|
+| `validar` · `gerar` · `atualizar` | colisão real — são exatamente os três que o item 3 já nomeava |
+| `a mesma` | artefato: o ✅ da linha 51 marca `Verifica-se a integridade`, e `a mesma licença` é prosa da mesma linha |
+| `realizar` | artefato: a linha 107 tem ❌ e ✅, e `Realize` está do lado ❌ |
+
+Os cinco entraram em `COLISOES` com o motivo. O check compara com essa lista e
+falha nos **dois** sentidos — colisão nova entra, colisão resolvida tem de sair.
+Só o primeiro sentido seria a allowlist que só cresce, e o segundo é o que
+impede uma entrada de sobreviver ao conserto que a tornou obsoleta.
+
+**O `mantenha` é a saída que se auto-mantém.** Termo com alguma linha do léxico
+cujo uso é `mantenha` fica fora da varredura — essa linha *é* a resolução, e foi
+o conserto do `apenas` e do `executar`. Dividir o sentido cala o check sem
+ninguém tocar em `COLISOES`.
+
+### Duas decisões de escopo, ambas medidas
+
+**Varre só linha com ✅.** Varrendo o arquivo inteiro entram 12 termos a mais
+(`onde`, `inclusive`, `o mesmo`, `suportar` casando `verbo-suporte`, e os
+`realizar`/`efetuar`/`proceder a` da própria lista de proibidos da PTC-4) —
+todos prosa ou lado ❌. Uma lista triada de 17 esconde a 18ª, que é o ponto do
+check. O que isso perde está escrito no docstring: a coluna "Reescrito" do
+formato de saída (linha 227) também prescreve e não tem ✅. Hoje todo termo de
+lá já é pego por outro ✅, então não custa nada — se um dia custar, é ali que
+mexe.
+
+**Corte de infinitivo, não stemmer.** `validar` → `valid` casa `Valide`,
+`valida` e `validação`. O piso de 4 letras existe porque `gerar` → `ger` casaria
+`gerúndio` e `gerenciar`; em troca `gera` (linha 77) escapa e `gerar` só é pego
+pela 76. Ceiling nomeado no código.
+
+### Verificado por mutação, três vezes
+
+| Mutação | Resultado |
+|---|---|
+| tirar a linha `mantenha` do `executar` no léxico | `novas: ['executar']` — **reproduz o bug histórico** |
+| varrer o arquivo inteiro em vez das linhas com ✅ | `novas:` 12 termos — o filtro é load-bearing |
+| acrescentar linha `mantenha` para `validar` | `sumiram: ['validar']` — o sentido inverso fecha |
+
+A primeira é a que importa: o check só vale se pegaria o `executar`, que é o
+bug que ele existe por causa de. 17 → 18 checks, ainda grátis.
+
+### O que o check **não** faz
+
+Ele acha contradição por **leitura**, e a regra que as 8 rodadas do
+`goal-falso-positivo` produziram diz que leitura não decide nada: `talvez` e a
+expansão de sigla estão escritos com a mesma incoerência e deram 5/5 nos dois.
+Então ele não fecha o item 3 — ele **produz a lista de candidatos** dele de
+graça e trava a lista contra crescimento silencioso. Quem decide se `validar`
+vira conserto continua sendo `PTC_TENTATIVAS=1` cinco vezes.
+
+### Passada no README, na mesma sessão
+
+Os cinco comparativos do README usavam três formatos diferentes (tabela de
+regras, bloco `diff`, traço de pipeline). Todos passaram para a tabela
+`Regra | Original | Reescrito` do item 1. **Zero bloco `diff` restante** — e o
+`AGENTS.md` foi corrigido junto, porque a linha que protegia "os blocos `diff`
+com linhas `-`" passou a apontar para nada. Proteção que aponta para construção
+que não existe mais é a mesma família do check morto: ela parece cobertura.
+
+Duas coisas medidas em vez de afirmadas, com `tests/legibilidade.py`:
+
+| Exemplo | palavras/frase | Flesch-PT |
+|---|---|---|
+| 1 — runbook, `estrito` | 12,3 → **7,5** | 74,0 → 74,8 |
+| 2 — comunicado, `leve` | 9,0 → 9,0 | 35,3 → **32,9** |
+
+O item 2 **piora** no Flesch e não se move em palavras/frase, e ficou escrito
+assim no README: em `leve` as regras que moveriam a métrica estão dispensadas.
+É o mesmo perfil que reprovou o `caso-03` na calibração, e serve melhor como
+evidência de que o nível faz o que promete do que qualquer adjetivo.
+
+Os exemplos 3 e 4 não levaram número de propósito — `Arquivo enviado.` é curto
+demais para medir (o runner diria "texto curto demais"), e a fórmula é de PT, não
+de EN. **Se o texto de um exemplo mudar, remeça:** os números estão escritos à
+mão no README e nada os verifica.
+
+Entrou também `docs/assets/pipeline-bilingue.svg` — o pipeline bilíngue em linha,
+com a aresta de retorno do linter reverso, que é a parte que a prosa não mostra.
+SVG escrito à mão, sem dependência, com `prefers-color-scheme` para os dois temas
+(conferidos os dois no Chrome headless). `tools/build.py` não toca em
+`docs/assets/`: ele só escreve caminhos nomeados, nunca limpa a pasta.
+
+### Nota de método — mutação em arquivo não commitado
+
+Reverter a mutação 2 com `git checkout -- tests/test_runner.py` apagou o check
+inteiro junto: o arquivo ainda não estava commitado, então `HEAD` era a versão
+sem ele. As duas mutações já tinham rodado, mas o código teve de ser reescrito.
+**Verificação por mutação sobre trabalho não commitado restaura de cópia, não do
+git.**
+
 ## Como retomar
 
 Instale o harness uma vez — ele deixou de ser stdlib puro:
@@ -917,7 +1023,7 @@ Depois, o que é grátis primeiro:
 ```bash
 PTC_ADVERSARIAL=1 ./init.sh --cobertura   # 8/8 — fechada (grátis)
 ./init.sh --cobertura                      # 8/8 e 8/8 (grátis)
-.venv/bin/python3 tests/test_runner.py     # 15 checks do runner (grátis)
+.venv/bin/python3 tests/test_runner.py     # 18 checks do runner (grátis)
 ./init.sh                                  # 22 casos — última rodada: 22/22, exit 0
 ```
 
@@ -931,14 +1037,15 @@ O que ficou candidato a próxima sessão, em ordem de evidência:
 | 1 | `FLAKY` imprimir o motivo da 1ª falha | **feito** em 2026-08-16 |
 | 2 | `SKILL.md` sempre emitir "Texto final" | **feito** em 2026-08-16 |
 | — | `rodar()` dizer por que o CLI saiu != 0 | **feito** em 2026-08-16, achado pelo item 1 |
-| 3 | asserção atrás dos termos que o `SKILL.md` prescreve ✅ e o léxico manda evitar | aberto, **sem oscilação medida**. `validar` é o mais exposto: ✅ em `SKILL.md:107, 120, 123, 227` e `lexico.md:30` manda "verificar **ou** aprovar; congele um". Depois dele, `gerar` (✅ em `:76, 77`; `caso-12` protege só `é gerado`) e `atualizar` (✅ em `:56, 57`) |
-| 4 | check grátis de colisão léxico ↔ `SKILL.md` em `test_runner.py` | aberto. O procedimento existe em prosa desde 08-12 ("antes de acrescentar palavra ao léxico, procure ela no `SKILL.md`") e nunca virou código — mesmo formato do check morto da rodada 1 |
+| 3 | asserção atrás dos termos que o `SKILL.md` prescreve ✅ e o léxico manda evitar | aberto, **sem oscilação medida**. A lista completa é `COLISOES` em `test_runner.py`, e o item 4 a mantém honesta: `validar` (✅ em `SKILL.md:107, 120, 123, 227`, contra `lexico.md:30` "verificar **ou** aprovar; congele um"), `gerar` (✅ em `:76`; `caso-12` protege só `é gerado`) e `atualizar` (✅ em `:56, 57`) |
+| 4 | check grátis de colisão léxico ↔ `SKILL.md` em `test_runner.py` | **feito** em 2026-08-17. 5 colisões triadas, 3 delas o item 3 |
 | 5 | onde o léxico **não** mora — cláusula de fronteira no molde da PTC-8 | aberto, preventivo: as entradas do léxico carregam rótulo próprio (PTC-1, PTC-3, PTC-4) e nada diz qual citar quando a correção sai de lá |
 
-Os três abertos são preventivos e **nenhum tem oscilação medida**. A série de 8
+Os dois abertos são preventivos e **nenhum tem oscilação medida**. A série de 8
 rodadas mediu duas contradições textuais e não consertou nenhuma: escreva a
 asserção primeiro (item 3), meça 5×, e só divida o sentido no léxico se oscilar.
-O item 4 é o que torna isso barato — ele acha o próximo candidato sozinho.
+O item 4 tornou isso barato — a lista de candidatos agora é mecânica, e cresce
+sozinha na próxima palavra que alguém acrescentar ao léxico.
 
 Duas disciplinas que as oito rodadas confirmaram e que economizam rodada perdida:
 
