@@ -14,7 +14,7 @@ Os arquivos abaixo contêm violações deliberadas das próprias regras PTC. Ela
 |---|---|
 | `tests/casos/*.md` | **texto 100% ruim.** É a entrada dos testes. Corrigir aqui faz os testes pararem de testar. |
 | `SKILL.md` | os exemplos marcados `❌` — `Faz-se a validação`, `o mesmo`, `micro-serviços`, `1.5 GB`, `um simples teste` |
-| `README.md` | os blocos `diff` com linhas `-`, e a seção "O problema" |
+| `README.md` | os blocos `Entrada:`, a coluna "Original" de toda tabela de exemplo, e a seção "O problema" |
 | `references/*.md` | as colunas "Evite" e "Errado" das tabelas |
 
 Um agente que "melhora a qualidade do texto" deste repo quebra a skill **em silêncio**: os testes continuam rodando e passam a não detectar nada.
@@ -101,11 +101,35 @@ PTC_TIMEOUT=600 ./init.sh          # timeout por chamada (default: 300s)
 PTC_ADVERSARIAL=1 ./init.sh --cobertura   # matriz só com contra-teste caso-adv-*
 ```
 
-`tests/test_runner.py` cobre as duas decisões que os casos **não** alcançam: os
-quatro estados de `veredito()` e o filtro do `PTC_ADVERSARIAL`. Reproduzir um
-`ESCALOU` de verdade depende do modelo menor falhar, que é justamente o que não
-se controla — ali `rodar` vai dublado. Roda em `./init.sh` sem argumento, junto
-do `build.py --verificar`, pela mesma razão: é grátis.
+`tests/test_runner.py` cobre o que os casos **não** alcançam: os quatro estados
+de `veredito()`, o filtro do `PTC_ADVERSARIAL`, o gate de legibilidade e a
+colisão léxico ↔ `SKILL.md`. Reproduzir um `ESCALOU` de verdade depende do
+modelo menor falhar, que é justamente o que não se controla — ali `rodar` vai
+dublado. Roda em `./init.sh` sem argumento, junto do `build.py --verificar`,
+pela mesma razão: é grátis.
+
+### Antes de acrescentar palavra ao léxico
+
+`teste_colisao_lexico_skill` varre a coluna "Evite" do `lexico.md` contra as
+linhas com ✅ do `SKILL.md`. Termo proibido de um lado e prescrito do outro é a
+assinatura do `apenas` e do `executar`: os dois arquivos vão concatenados no
+mesmo prompt, e **nenhum caso pega isso** — a saída sai certa metade das vezes.
+
+Ele compara com `COLISOES`, a lista de dívidas já triadas, e falha nos dois
+sentidos: colisão nova entra, colisão resolvida tem de sair. Duas saídas
+possíveis quando ele reprova:
+
+- **divida o sentido no léxico**, com uma linha cujo uso é `mantenha` — foi o
+  conserto do `apenas` e do `executar`, e o check se cala sozinho depois dela
+- **triague em `COLISOES`** com o motivo, se não houver oscilação medida
+
+A segunda não é escape: pela regra que as 8 rodadas do `goal-falso-positivo`
+produziram, **contradição textual não é achado — oscilação é.** Meça 5× com
+`PTC_TENTATIVAS=1` antes de dividir sentido nenhum.
+
+Ele varre só as linhas com ✅, que é o único marcador inequívoco de forma
+prescrita. Varrer o arquivo inteiro acha 12 termos a mais, todos prosa ou lado
+❌ do exemplo — e allowlist de 17 entradas esconde a 18ª, que é o ponto.
 
 ## Loops
 
@@ -188,7 +212,7 @@ O `FLAKY` só passou a dizer isso em 2026-08-16. Antes, ele imprimia a contagem 
 
 **Colisão de rótulo, caso real:** `caso-01` citava PTC-6 em 4/5. As duas hipóteses — não aplicou, ou aplicou e não citou — dão a mesma saída no runner, e só o texto final bruto separa. Rodando 6× e procurando `APIs`: a correção saiu **6/6**, e em 2 delas a linha veio como `PTC-8 (apóstrofo não marca plural)`. Plural de sigla parece ortografia; o `SKILL.md` dizia que a regra mora na PTC-6 e não dizia que ela não mora na PTC-8. Com a cláusula de fronteira na PTC-8: 11/11. **Diagnostique olhando a saída bruta antes de mexer na regra** — as duas hipóteses mandavam para lugares opostos.
 
-**Regra ambígua, caso real:** `apenas` estava nos dois lados da skill — `SKILL.md` (PTC-5) prescrevia `apenas um teste` como a forma correta do sentido anteposto, e `lexico.md` mandava cortar `apenas` como minimizador. Os dois arquivos vão concatenados no mesmo prompt, então o modelo decidia diferente a cada rodada. A entrada do léxico foi dividida em hedge (`é apenas um bug`, corte) e quantidade (`apenas um teste`, mantenha).
+**Regra ambígua, caso real:** `apenas` estava nos dois lados da skill — `SKILL.md` (PTC-5) prescrevia `apenas um teste` como a forma correta do sentido anteposto, e `lexico.md` mandava cortar `apenas` como minimizador. Os dois arquivos vão concatenados no mesmo prompt, então o modelo decidia diferente a cada rodada. A entrada do léxico foi dividida em hedge (`é apenas um bug`, corte) e quantidade (`apenas um teste`, mantenha). Desde 2026-08-17 essa família tem check grátis — ver "Antes de acrescentar palavra ao léxico". Ele acha a contradição por leitura; **quem decide se ela vira conserto continua sendo a medição.**
 
 **Infra:** `FAIL` sem `faltou` e sem `corrigiu` significa que nunca houve resposta para avaliar. Continua contando como falha — caso não verificado não é caso verde — mas não é regressão. Suba `PTC_TIMEOUT` se for recorrente.
 

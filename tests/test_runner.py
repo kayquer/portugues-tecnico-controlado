@@ -9,10 +9,13 @@ Verifica as decisões do `verify.py` que os casos de teste **não** alcançam:
                de `loops/goal-falso-positivo.md`
   métrica      o gate de legibilidade: que ele reprova, que ele aprova, que
                não mede a saída inteira, e que **não escala** para o opus
+  colisão      termo que o `lexico.md` proíbe e o `SKILL.md` prescreve como ✅
+               — os dois vão concatenados no mesmo prompt
 
 Uso: python3 tests/test_runner.py
 """
 import io
+import re
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -268,6 +271,97 @@ def teste_filtro_adversarial():
     fechada = len(regras_adv) == len(verify.REGRAS)
     assert codigo_on == (0 if fechada else 1), (codigo_on, sorted(regras_adv))
     assert codigo_off == 0, "a matriz normal deveria estar fechada"
+
+
+# Colisões conhecidas entre o `lexico.md` e o `SKILL.md`, com o motivo de cada
+# uma ainda estar aqui. Não é allowlist de conveniência: é a lista de dívidas
+# triadas, e o check falha nos **dois** sentidos — colisão nova entra, colisão
+# resolvida tem de sair. Allowlist que só cresce vira o check morto da rodada 1.
+COLISOES = {
+    "validar": "item 3 do loop-state, sem oscilação medida. `lexico.md:30` manda "
+               "congelar um sentido (verificar OU aprovar); o SKILL.md prescreve "
+               "`Valide` em três exemplos ✅",
+    "gerar": "mesma dívida. `lexico.md:33` chama de genérico demais; `SKILL.md:76` "
+             "prescreve `para gerar o relatório` ✅",
+    "atualizar": "mesma dívida. `lexico.md:31` separa update/refresh; "
+                 "`SKILL.md:56-57` prescreve `atualiza o status` ✅",
+    "a mesma": "falso positivo de granularidade de linha: o ✅ da linha 51 marca "
+               "`Verifica-se a integridade`, e `a mesma licença` é prosa vizinha",
+    "realizar": "falso positivo de granularidade de linha: a linha 107 tem ❌ e ✅, "
+                "e `Realize` está do lado ❌",
+}
+
+
+def termos_do_lexico():
+    """Coluna "Evite" das tabelas evite→use do `lexico.md`.
+
+    Termo com alguma linha cujo uso é `mantenha` fica **fora**: essa linha é a
+    resolução da colisão, não uma exceção. Foi assim que `apenas` e `executar`
+    foram consertados, e é o que faz este check se calar sozinho quando o
+    sentido é dividido — em vez de exigir uma entrada em `COLISOES`.
+    """
+    evite = {}
+    cabecalho = False
+    for linha in (verify.REPO / "references/lexico.md").read_text(encoding="utf-8").splitlines():
+        if not linha.startswith("|"):
+            cabecalho = False
+            continue
+        celulas = [c.strip() for c in linha.strip().strip("|").split("|")]
+        if celulas[0] == "Evite":
+            cabecalho = True
+            continue
+        if not cabecalho or set("".join(celulas)) <= set("-: "):
+            continue
+        for termo in celulas[0].split("/"):
+            # `apenas *(hedge: ...)*` → `apenas`: o parentético diz o sentido,
+            # não faz parte do termo.
+            termo = re.sub(r"\*?\(.*?\)\*?", "", termo).strip(" *`").lower()
+            if termo:
+                evite.setdefault(termo, []).append(celulas[1].lower())
+    return {t for t, usos in evite.items() if not any("mantenha" in u for u in usos)}
+
+
+def raiz_lexical(termo):
+    """`validar` → `valid`, para casar `Valide`, `valida` e `validação`.
+
+    ponytail: corte de infinitivo, não stemmer. O piso de 4 letras é o que
+    impede `gerar` → `ger` de casar `gerúndio` e `gerenciar`; em troca `gera`
+    (sem o `r`) escapa, e `gerar` só é pego pela linha 76. Medido: com o piso,
+    5 termos; sem ele, ruído em cima de `ger`, `sub` e `ca`. Subir para um
+    stemmer de verdade só se um termo real passar batido.
+    """
+    corte = re.fullmatch(r"(.+?)(ar|er|ir)", termo)
+    return corte.group(1) if corte and len(corte.group(1)) >= 4 else termo
+
+
+def teste_colisao_lexico_skill():
+    """O procedimento que existia só em prosa desde 2026-08-12.
+
+    `apenas` e `executar` ficaram meses com o `SKILL.md` prescrevendo ✅ o que o
+    `lexico.md` mandava cortar. Os dois arquivos vão concatenados no mesmo
+    prompt, então o modelo decidia diferente a cada rodada — e nenhum caso pega
+    isso, porque a saída sai *certa* metade das vezes.
+
+    Só linhas com ✅ são varridas: é o único marcador inequívoco de "forma
+    prescrita" no arquivo. Varrer o arquivo inteiro acha 12 termos a mais, todos
+    prosa ou lado ❌ do exemplo. A coluna "Reescrito" do formato de saída
+    (linha 227) também prescreve e fica de fora — hoje todo termo de lá já é
+    pego por um ✅.
+    """
+    linhas = [l for l in (verify.REPO / "SKILL.md").read_text(encoding="utf-8").splitlines()
+              if "✅" in l]
+    assert linhas, "nenhuma linha com ✅ no SKILL.md — o check varreria nada"
+
+    achadas = {t for t in termos_do_lexico()
+               if any(re.search(rf"\b{re.escape(raiz_lexical(t))}\w*", l, re.IGNORECASE)
+                      for l in linhas)}
+    assert achadas == set(COLISOES), (
+        "colisão léxico ↔ SKILL.md mudou."
+        f"\n       novas:   {sorted(achadas - set(COLISOES))}"
+        f"\n       sumiram: {sorted(set(COLISOES) - achadas)}"
+        "\n       Nova: o léxico proíbe um termo que o SKILL.md prescreve como ✅."
+        "\n       Divida o sentido no léxico (linha com uso `mantenha`) ou triague"
+        "\n       em COLISOES com o motivo. Sumiu: resolvida — apague a entrada.")
 
 
 if __name__ == "__main__":
