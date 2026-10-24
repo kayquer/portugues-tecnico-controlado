@@ -218,6 +218,15 @@ def teste_metrica_sem_texto_final():
                                   "não dá para medir")], falhas
 
 
+def teste_texto_final_para_em_a_confirmar():
+    """"A confirmar" repete o marcador como pergunta, sem ser texto reescrito.
+    Se a janela não parasse nela, `nao-marca` acharia o termo na pergunta e
+    a métrica mediria a lista de perguntas. Vale com ou sem "Mantido"."""
+    saida = ("**Texto final:**\nFaça o backup.\n\n"
+             "**A confirmar:** quem faz o backup do banco de dados?\n")
+    assert verify.texto_final(saida).strip() == "Faça o backup."
+
+
 def teste_gate_metrica_reprova_e_aprova():
     """O par. Só o lado que reprova deixaria passar um gate travado em vermelho."""
     exigente, _ = verify.avaliar(caso_falso(flesch_min=90, pal_frase_max=5), DIFICIL)

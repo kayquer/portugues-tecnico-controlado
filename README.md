@@ -31,21 +31,26 @@ Saída:
 > | Regra | Original | Reescrito |
 > |---|---|---|
 > | PTC-1 (`-se` apassivador) | `deve-se verificar os logs` | `verifique os logs` |
-> | PTC-1 (`o mesmo`) | `o mesmo deve ser reportado` | `reporte esse erro` |
-> | PTC-2 (gerúndio conector) | `garantindo que cada backup não passe` | frase própria: `Cada backup ocupa no máximo 1,5 GB.` |
+> | PTC-1 (`o mesmo`) | `o mesmo deve ser reportado` | `informe o erro` |
+> | PTC-2 (gerúndio conector) | `garantindo que cada backup não passe` | passo próprio: `Confirme que cada backup ocupa no máximo 1,5 GB.` |
 > | PTC-4 (verbo-suporte) | `Realize a validação da integridade` | `Valide a integridade` |
 > | PTC-5 (cadeia de `de`) | `dos dados de backup do cluster de micro-serviços` | `dos backups do cluster de microsserviços` |
+> | PTC-6 (falso amigo) | `reportado` | `informe` |
 > | PTC-7 (decimal) | `1.5 GB` | `1,5 GB` |
 > | PTC-8 (hífen r/s) | `micro-serviços` | `microsserviços` |
 >
 > **Texto final:**
-> Depois do deploy, verifique os logs. Valide a integridade dos backups do cluster de microsserviços. Cada backup ocupa no máximo 1,5 GB. Se o comando retornar erro, reporte esse erro.
 >
-> **Mantido de propósito:** `deploy`, empréstimo consagrado sem tradução fixada no glossário.
+> 1. Depois do deploy, verifique os logs.
+> 2. Valide a integridade dos backups do cluster de microsserviços.
+> 3. Confirme que cada backup ocupa no máximo 1,5 GB.
+> 4. Se houver erro, informe o erro.
+>
+> **Mantido de propósito:** `deploy`, empréstimo consagrado sem tradução fixada no glossário. `Se houver erro` fica sem ator porque `haver` existencial não tem sujeito, e o original não diz quem detecta o erro. Inventar `Se o comando retornar erro` seria acrescentar um fato.
 
-**Medido:** 12,3 → **7,5** palavras por frase · Flesch-PT 74,0 → 74,8.
+**Medido:** 12,3 → **7,5** palavras por frase · Flesch-PT 74,0 → 80,5.
 
-O número que se move é o primeiro, e o segundo quase não sai do lugar — o ganho aqui não é o texto ficar mais fácil, é `deve-se verificar` virar uma ordem para quem lê e `1.5 GB` parar de significar mil e quinhentos. Os dois números saem de [`tests/legibilidade.py`](tests/legibilidade.py), a 4ª asserção do harness, e ela mede inchaço — não fidelidade nem repetição.
+Quatro passos viram lista numerada porque `estrito` exige isso para sequência de 3 ou mais. `garantindo que` vira um passo de conferência (`Confirme que…`), não uma afirmação (`Cada backup ocupa…`): o original manda verificar o tamanho, não diz qual ele é. O ganho principal aqui não é o texto ficar mais fácil. É `deve-se verificar` virar uma ordem para quem lê e `1.5 GB` parar de significar mil e quinhentos. Os dois números saem de [`tests/legibilidade.py`](tests/legibilidade.py), a 4ª asserção do harness, e ela mede inchaço — não fidelidade nem repetição.
 
 ### 2. Comunicado interno, nível `leve`
 
@@ -99,7 +104,7 @@ Saída:
 > **Texto final:**
 > O agente enviou o arquivo.
 >
-> **Mantido de propósito:** `Arquivo enviado.` lê como evento concluído **e** como propriedade do estado, e a entrada não decide qual. Assumido evento. Se for estado, a forma é `O arquivo está no estado ENVIADO.` — a skill declara a inferência em vez de escolher em silêncio.
+> **Mantido de propósito:** `Arquivo enviado.` lê como evento concluído **e** como propriedade do estado, e a entrada não decide qual. Assumido evento. Se for estado, a forma é `O arquivo está no estado ENVIADO.` — a skill declara a inferência em vez de escolher em silêncio. O ator `o agente` vem do contexto: quem emite o status é o próprio agente. Se outro processo enviou o arquivo, a forma é `[a confirmar: quem enviou o arquivo?] enviou o arquivo.`
 
 A regra não tem número PTC próprio: pela tabela de violações, este caso é indistinguível de um PTC-1 comum. A flag muda mais duas coisas, e a segunda é a que importa aqui — **nenhuma anáfora atravessa frase**, porque o consumidor pode truncar a saída no meio.
 
@@ -115,18 +120,23 @@ Saída:
 
 > **Fonte:** inglês *(o idioma do input)* · **Modo:** bilíngue
 >
-> | Regra do PT | Original (EN) | Corrigido na fonte (EN) |
+> | Regra do PT | Original (EN) | Na fonte (EN) |
 > |---|---|---|
-> | PTC-1 (quem faz, aparece) | `The report should be sent` — quem envia? | `The scheduler sends the report` |
-> | PTC-3 (modal unívoco) | `should` — obrigação ou expectativa? | presente factual: `sends` |
-> | PTC-1 (nominalização sem ator) | `after validation` — quem valida, e o quê? | `after the gateway validates the token` |
+> | PTC-1 (quem faz, aparece) | `The report should be sent` — quem envia? | `[to confirm: who sends it?] sends the report` |
+> | PTC-3 (modal unívoco) | `should` — obrigação ou expectativa? | pergunta em "A confirmar" |
+> | PTC-1 (nominalização sem ator) | `after validation` — quem valida, e o quê? | `after [to confirm: who validates what?]` |
 >
-> **Texto final (EN):** The scheduler sends the report after the gateway validates the token.
-> **Texto final (PT):** O agendador envia o relatório depois que o gateway valida o token.
+> **Texto final (EN):** [to confirm: who sends it?] sends the report after [to confirm: who validates what?].
+> **Texto final (PT):** [a confirmar: quem envia?] envia o relatório depois que [a confirmar: quem valida o quê?].
 >
-> **Ambiguidades resolvidas na fonte:** 3. As três já estavam no inglês original — nenhuma foi criada pela tradução.
+> **A confirmar:** 1. Quem envia o relatório? 2. Quem valida, e o que é validado? 3. `should` é obrigação ou expectativa? As três lacunas já estavam no inglês original. Nenhuma foi criada pela tradução.
 
-Repare na coluna do meio: as perguntas são do **português**, e as três correções entraram no **inglês**. O inglês não obriga a declarar o ator na voz passiva; o português obriga. Quando uma regra do PT exige informação que o EN não tinha, o problema é ambiguidade na fonte, e é o único mecanismo que impede o tradutor de inventar o ator. Detalhe do pipeline em [Modo bilíngue](#modo-bilíngue).
+Com as respostas do autor (o agendador envia, o gateway valida o token, é obrigação), o par fecha assim:
+
+> **EN:** The scheduler sends the report after the gateway validates the token.
+> **PT:** O agendador envia o relatório depois que o gateway valida o token.
+
+Repare na coluna do meio: as perguntas são do **português**, e as três voltam para o **inglês**. O inglês não obriga a declarar o ator na voz passiva; o português obriga. Quando uma regra do PT exige informação que o EN não tinha, o problema é ambiguidade na fonte. A skill não escolhe um ator plausível para fechar a lacuna. `the scheduler` e `the gateway` têm de vir de quem escreveu o texto, porque um ator escolhido pelo tradutor é exatamente o ator inventado que o mecanismo existe para impedir. Detalhe do pipeline em [Modo bilíngue](#modo-bilíngue).
 
 ---
 
@@ -187,7 +197,7 @@ Ou descreva a tarefa em linguagem natural:
 - "quero esse procedimento em EN e PT"
 - "revisa esse comunicado"
 
-Quando você não especifica, a skill classifica o nível de rigor e o destinatário sozinha, e declara o que assumiu na primeira linha da resposta. A saída é sempre a mesma da seção anterior: tabela nomeando a regra violada em cada trecho, texto final, e nota sobre o que ficou como estava.
+Quando você não especifica, a skill classifica o nível de rigor e o destinatário sozinha, e declara o que assumiu na primeira linha da resposta. A saída é sempre a mesma da seção anterior: tabela nomeando a regra violada em cada trecho, texto final, nota sobre o que ficou como estava e, quando o original não deu alguma informação, a lista do que falta confirmar.
 
 ---
 
@@ -277,7 +287,8 @@ Falha quando uma célula existe numa versão e não na outra, quando a contagem 
 **O que a skill faz**
 
 - Reescreve texto em português para leitura única, e nomeia a regra que cada trecho violava.
-- Preserva todo fato, condição e qualificador de escopo do original.
+- Preserva todo fato, condição e qualificador de escopo do original, e não acrescenta fato. Ator, número ou prazo que o original não dá viram um marcador `[a confirmar: …]` e uma pergunta na seção "A confirmar".
+- Deixa intocados código, comando, identificador, URL, string de log e rótulo real de interface.
 - Gera o par EN/PT com verificação de equivalência proposicional.
 - Ajusta o rigor ao leitor, em vez de aplicar tudo sempre.
 - Aplica a ortografia do Acordo de 1990, com atenção ao vocabulário de TI.

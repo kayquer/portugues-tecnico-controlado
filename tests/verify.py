@@ -235,7 +235,7 @@ def rodar(skill, caso, modelo=MODELO):
 
 INICIO_TEXTO_FINAL = re.compile(r"\*\*Texto final:?\*\*|^#+\s*Texto final", re.IGNORECASE | re.MULTILINE)
 FIM_TEXTO_FINAL = re.compile(
-    r"\*\*Mantido de propósito|\*\*Não corrigido|\*\*Sinalizado|\*\*Deixado",
+    r"\*\*Mantido de propósito|\*\*A confirmar|\*\*Não corrigido|\*\*Sinalizado|\*\*Deixado",
     re.IGNORECASE,
 )
 

@@ -51,10 +51,12 @@ Se no passo 3 uma regra do português exigir informação que o inglês não tin
 
 Volte ao passo 1 e corrija o inglês. É o único mecanismo que impede o tradutor de inventar o ator.
 
+**Corrigir a fonte não é escolher um ator plausível.** A resposta vem do autor ou do próprio texto. Sem resposta, a fonte leva o marcador nos dois idiomas, `[to confirm: …]` no EN e `[a confirmar: …]` no PT, e a pergunta vai para "A confirmar". Um ator escolhido pela skill é exatamente o ator inventado que este mecanismo existe para impedir.
+
 > **EN fonte:** `The report should be sent after validation.`
-> PTC-1 pergunta: quem envia? PTC-3 pergunta: `should` é obrigação ou estimativa?
-> **→ corrige a fonte:** `The scheduler sends the report after the gateway validates the token.`
-> **→ PT:** `O agendador envia o relatório depois que o gateway valida o token.`
+> PTC-1 pergunta: quem envia? E quem valida o quê? PTC-3 pergunta: `should` é obrigação ou estimativa?
+> **→ sem resposta do autor:** `[to confirm: who sends it?] sends the report after [to confirm: who validates what?].` / `[a confirmar: quem envia?] envia o relatório depois que [a confirmar: quem valida o quê?].` O `should` também fica como pergunta em "A confirmar".
+> **→ com resposta** (o agendador envia, o gateway valida o token, é obrigação): `The scheduler sends the report after the gateway validates the token.` / `O agendador envia o relatório depois que o gateway valida o token.`
 
 Registre na saída toda ambiguidade que o linter reverso encontrou. É informação de valor: mostra onde o texto original mentia por omissão.
 
