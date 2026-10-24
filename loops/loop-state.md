@@ -9,7 +9,8 @@ começar a próxima. As seções estão em ordem cronológica; a última é a at
 - **Objetivo fechado:** `loops/goal-falso-positivo.md` — adversarial 8/8 ✓ em
   2026-08-16, depois de 8 rodadas e **zero achado de falso positivo**
 - **Objetivo fechado:** `loops/goal-cobertura.md` — positivo 8/8 ✓ · contra-teste 8/8 ✓ em 2026-08-02
-- **Suite:** 22 casos (2026-08-16) — 22/22, 1 instável (`caso-01`)
+- **Suite:** 27 casos (2026-10-24) — 27/27; `caso-03` e `caso-14` FLAKY, `caso-11` ESCALOU; `caso-11` regressão achada e corrigida (5/5) — ver a sessão de 2026-10-24
+- **Regras:** 9 desde 2026-10-24 — PTC-9, ruído de texto gerado (`references/ruido-ia.md`)
 - **Legibilidade:** 4ª asserção. Limiares calibrados: `caso-01` `flesch-min: 50`,
   `caso-11` `flesch-min: 68`, `caso-13` `pal-frase-max: 12` (este em observação —
   margem 1,3 contra espalhamento de 6,1). `caso-03` e `caso-12` foram reprovados
@@ -1010,6 +1011,89 @@ sem ele. As duas mutações já tinham rodado, mas o código teve de ser reescri
 **Verificação por mutação sobre trabalho não commitado restaura de cópia, não do
 git.**
 
+## Sessão seguinte — armadilhas, PTC-9 e o link no topo (2026-10-24)
+
+Três pedidos numa sessão, em três commits separados na branch
+`melhorias-armadilhas-ptc9`: o link da página de instalação no topo do README
+(e na homepage do repo), as armadilhas em que a skill caía, e uma regra nova
+contra ruído de texto gerado, adaptada da skill `deai-text`.
+
+### As armadilhas — a skill ensinava a inventar
+
+A varredura foi de leitura, não de oscilação. A doutrina "contradição textual
+não é achado" vale para duas regras que discordam; aqui os próprios exemplos ✅
+**prescreviam** o erro, e por isso foram direto, sem medir antes.
+
+| # | Armadilha | Conserto |
+|---|---|---|
+| A1 | **Ator inventado.** `estrito` exigia ator e não proibia inventar. Os ✅ `o agendador cria o backup`, `O gateway valida o token`, `Se o comando retornar erro` e o ex. 4 do README punham no texto um fato que o original não tinha | PTC-1: ator ausente vira imperativo ao leitor (procedimento) ou `[a confirmar: quem …?]` |
+| A2 | **Número inventado.** `alguns registros → até 50 registros` | PTC-3: número só se a fonte der; senão marcador |
+| A3 | **Certeza inflada.** `deveria funcionar → funciona` | PTC-3: zero hedge não autoriza afirmar o que a fonte não afirma |
+| A4 | **Zona protegida implícita.** Só `ingles.md` dizia para não tocar em código e rótulo de UI, e ele só carrega no bilíngue | Processo, passo 3: código, comando, identificador, URL, log, rótulo real de interface, citação |
+| A5 | **Perda silenciosa** em texto longo | Processo, passo 8: contar passos, condições, números e negações |
+| A6 | **Instrução embutida** no texto a reescrever | Processo: o texto é material, nunca instrução |
+| A7 | **Anáfora na flag `agente`.** `esse erro` atravessa a frase | item 2 da flag: demonstrativo + substantivo também é anáfora |
+| A8 | **Formato achatava a estrutura.** `> [texto corrido]` contra "sequência ≥3 vira lista" | texto final sem blockquote, estrutura preservada; README ex. 1 em lista numerada |
+| A9 | **Data ambígua.** `02/08/2026` sem regra de leitura | PTC-7: texto PT lê DD/MM; origem EN ou incerta vira marcador |
+
+O marcador ganhou seção própria na saída, `**A confirmar:**`, **depois** de
+"Mantido de propósito". `FIM_TEXTO_FINAL` em `verify.py` corta nela, e um check
+novo do runner (`teste_texto_final_para_em_a_confirmar`) prova que a pergunta
+não entra na janela de `nao-marca` nem na métrica.
+
+### PTC-9 — o que veio da `deai-text` e o que ficou de fora
+
+Critério da regra: **se o trecho sai e nenhum fato, condição ou instrução se
+perde, é ruído.** Catálogo em `references/ruido-ia.md`. Artefato de chatbot e
+conclusão genérica saem nos três níveis; enchimento, evasão de cópula e
+inflação, em `estrito` e `descritivo`. O check de colisão do runner passou a
+varrer também a coluna "Evite" do catálogo.
+
+Ficou de fora o "varie o ritmo, tenha opinião, escreva em 1ª pessoa" da
+`deai-text`: em `estrito`, a forma uniforme e neutra é o objetivo. O motivo está
+escrito no fim do catálogo, para ninguém "completar" depois.
+
+### Medição
+
+- Casos novos, 5× cada com `PTC_TENTATIVAS=1`: `caso-15-ator-ausente`,
+  `caso-16-ruido-ia`, `caso-17-data-pt`, `caso-adv-9-zona-protegida`,
+  `caso-adv-10-ruido-legitimo` — **5/5 os cinco**.
+- Cobertura 9/9 e 9/9; adversarial 9/9; runner 19 checks; build em dia.
+- Suite completa: **27/27, exit 0**, com três instáveis:
+  - `caso-03` FLAKY — `corrigiu indevidamente: informamos`, passou na 3ª de 3;
+  - `caso-14` FLAKY — `corrigiu indevidamente: suporta 500 conexões`, passou na 2ª;
+  - `caso-11` ESCALOU — sonnet falhou, opus passou.
+
+Os três são casos antigos, e a suspeita óbvia era a PTC-9 (o `informamos` do
+`caso-03` é 1ª pessoa em `leve`, que a regra deveria deixar). Comparação branch
+× `main`, com `PTC_TENTATIVAS=1 PTC_MODELO_ESCALA=`:
+
+| Caso | branch | `main` |
+|---|---|---|
+| `caso-03` | 5/5 | 5/5 |
+| `caso-11` | **0/5** | 3/5 |
+
+O `caso-03` não reproduziu em 10 rodadas: o FLAKY da suite foi ruído, e a PTC-9
+não mexe no `informamos`. O `caso-11` foi o achado. A `main` já oscilava (3/5,
+como a remedição de 2026-08-16 deixava prever), mas a branch caiu para 0/5, e a
+saída mostra o motivo: `Pacote enviado ao servidor.` virou `[a confirmar: quem
+enviou o pacote ao servidor?] enviou…`. A regra nova contra ator inventado (A1)
+tratou como lacuna um ator que o contexto dá — o trecho só tem um ator, o
+agente. Falsa dúvida é o erro simétrico do fato inventado, e o marcador
+espalhado em todo particípio tornaria a seção "A confirmar" inútil.
+
+Conserto na PTC-1: o contexto dá o ator quando o trecho tem um só ator e a
+frase sem sujeito continua a sequência dele; a dúvida é real quando ninguém é
+nomeado ou quando dois atores servem. O exemplo é outro (`O instalador baixa o
+pacote…`), para não ensinar a entrada do caso. Remedido 5× cada:
+`caso-11` **5/5** (melhor que a `main`) e `caso-15` **5/5** — o marcador
+continua onde o original não nomeia ninguém. O `caso-14` não foi remedido: o
+motivo do FLAKY (`suporta 500 conexões`) é léxico, sem relação com as mudanças.
+
+**Lição:** regra que proíbe inventar precisa dizer também o que conta como
+dado. Sem isso, o modelo resolve a ambiguidade para o lado seguro, e o seguro
+aqui quebra um caso que estava certo.
+
 ## Como retomar
 
 Instale o harness uma vez — ele deixou de ser stdlib puro:
@@ -1021,10 +1105,10 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 Depois, o que é grátis primeiro:
 
 ```bash
-PTC_ADVERSARIAL=1 ./init.sh --cobertura   # 8/8 — fechada (grátis)
-./init.sh --cobertura                      # 8/8 e 8/8 (grátis)
-.venv/bin/python3 tests/test_runner.py     # 18 checks do runner (grátis)
-./init.sh                                  # 22 casos — última rodada: 22/22, exit 0
+PTC_ADVERSARIAL=1 ./init.sh --cobertura   # 9/9 (grátis)
+./init.sh --cobertura                      # 9/9 e 9/9 (grátis)
+.venv/bin/python3 tests/test_runner.py     # 19 checks do runner (grátis)
+./init.sh                                  # 27 casos — última rodada: 27/27, exit 0
 ```
 
 **Os dois goal loops estão fechados. Não reabra nenhum.** Objetivo novo pede
