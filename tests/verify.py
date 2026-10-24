@@ -38,7 +38,7 @@ REPO = AQUI.parent
 
 VERDE, VERMELHO, AMARELO, CINZA, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[90m", "\033[0m"
 
-REGRAS = [str(n) for n in range(1, 9)]  # PTC-1..PTC-8
+REGRAS = [str(n) for n in range(1, 10)]  # PTC-1..PTC-9
 NIVEIS = ("estrito", "descritivo", "leve")
 CHAVES = ("nivel", "espera", "nao-marca", "contra-teste",
           "bilingue", "destinatario", "deve-conter",
@@ -235,7 +235,7 @@ def rodar(skill, caso, modelo=MODELO):
 
 INICIO_TEXTO_FINAL = re.compile(r"\*\*Texto final:?\*\*|^#+\s*Texto final", re.IGNORECASE | re.MULTILINE)
 FIM_TEXTO_FINAL = re.compile(
-    r"\*\*Mantido de propósito|\*\*Não corrigido|\*\*Sinalizado|\*\*Deixado",
+    r"\*\*Mantido de propósito|\*\*A confirmar|\*\*Não corrigido|\*\*Sinalizado|\*\*Deixado",
     re.IGNORECASE,
 )
 

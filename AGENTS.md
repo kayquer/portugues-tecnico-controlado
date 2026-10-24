@@ -15,7 +15,7 @@ Os arquivos abaixo contêm violações deliberadas das próprias regras PTC. Ela
 | `tests/casos/*.md` | **texto 100% ruim.** É a entrada dos testes. Corrigir aqui faz os testes pararem de testar. |
 | `SKILL.md` | os exemplos marcados `❌` — `Faz-se a validação`, `o mesmo`, `micro-serviços`, `1.5 GB`, `um simples teste` |
 | `README.md` | os blocos `Entrada:`, a coluna "Original" de toda tabela de exemplo, e a seção "O problema" |
-| `references/*.md` | as colunas "Evite" e "Errado" das tabelas |
+| `references/*.md` | as colunas "Evite" e "Errado" das tabelas — inclusive `ruido-ia.md`, cuja coluna "Evite" é texto de chatbot de propósito |
 
 Um agente que "melhora a qualidade do texto" deste repo quebra a skill **em silêncio**: os testes continuam rodando e passam a não detectar nada.
 
@@ -110,7 +110,7 @@ pela mesma razão: é grátis.
 
 ### Antes de acrescentar palavra ao léxico
 
-`teste_colisao_lexico_skill` varre a coluna "Evite" do `lexico.md` contra as
+`teste_colisao_lexico_skill` varre a coluna "Evite" do `lexico.md` e do `ruido-ia.md` contra as
 linhas com ✅ do `SKILL.md`. Termo proibido de um lado e prescrito do outro é a
 assinatura do `apenas` e do `executar`: os dois arquivos vão concatenados no
 mesmo prompt, e **nenhum caso pega isso** — a saída sai certa metade das vezes.
@@ -131,14 +131,20 @@ Ele varre só as linhas com ✅, que é o único marcador inequívoco de forma
 prescrita. Varrer o arquivo inteiro acha 12 termos a mais, todos prosa ou lado
 ❌ do exemplo — e allowlist de 17 entradas esconde a 18ª, que é o ponto.
 
+## Fato inventado
+
+Desde a v1.2, a skill **não preenche lacuna com o plausível**. Ator, número, prazo ou destinatário que o original não dá viram `[a confirmar: …]` no texto final, e a pergunta sai na seção "A confirmar". O motivo: os exemplos ✅ da v1.1 ensinavam a inventar (`o agendador cria o backup`, `O gateway valida o token`, `até 50 registros`), e a regra que proibia isso só existia para `descritivo`.
+
+Ao escrever exemplo ✅ novo, confira se ele afirma algo que o ❌ não dizia. Se afirma, o exemplo ensina a alucinar: use o marcador, ou ponha o fato no ❌. `caso-15` cobre o comportamento.
+
 ## Loops
 
 Goal loops no formato do [learn-harness-engineering](https://github.com/walkinglabs/learn-harness-engineering) (lecture-13). Rode com `/loop` sem intervalo — o modelo se auto-pauta e para no critério do próprio arquivo.
 
 | Loop | Critério mecânico | Estado |
 |---|---|---|
-| `loops/goal-cobertura.md` | `./init.sh --cobertura` sai 0 | fechado (8/8, 8/8) |
-| `loops/goal-falso-positivo.md` | `PTC_ADVERSARIAL=1 ./init.sh --cobertura` sai 0 | fechado (8/8, em 8 rodadas) |
+| `loops/goal-cobertura.md` | `./init.sh --cobertura` sai 0 | fechado (8/8, 8/8); 9/9 desde a PTC-9 |
+| `loops/goal-falso-positivo.md` | `PTC_ADVERSARIAL=1 ./init.sh --cobertura` sai 0 | fechado (8/8, em 8 rodadas); 9/9 com o `caso-adv-10` |
 
 Sem julgamento, sem "acho que já deu". O segundo existe porque o primeiro fechou com contra-testes escritos **junto com a regra** — todos testam a leitura legítima óbvia, e nenhum testa português correto que *se parece* com a violação. Por isso `PTC_ADVERSARIAL` não conta os antigos: PTC-6 tem 4 contra-testes e sairia "pronta" sem uma linha nova.
 
@@ -255,7 +261,7 @@ nao-marca: front-end, usuário
 | `flesch-min` | piso do Flesch-PT no **texto final** — medido, nunca chutado |
 | `pal-frase-max` | teto de palavras por frase no **texto final** |
 
-O parser corta a saída antes da seção "mantido de propósito" para checar `nao-marca` — ali a skill cita a regra que *pegaria* o trecho, sem tê-lo corrigido, e isso acusaria falso positivo.
+O parser corta a saída antes da seção "mantido de propósito" (ou "A confirmar", a que vier primeiro) para checar `nao-marca` — ali a skill cita a regra que *pegaria* o trecho, sem tê-lo corrigido, e isso acusaria falso positivo.
 
 `deve-conter` **não** é cortado: o que ele existe para provar — tabela de proposições do modo bilíngue, registro do linter reverso — fica fora do texto reescrito por desenho.
 
@@ -305,7 +311,7 @@ mudança, e teto já é o que `nao-marca` faz, com termo concreto em vez de núm
 | chave desconhecida | `espra: PTC-1` dava `PASS` sem verificar nada |
 | `espera`, `nao-marca` e `deve-conter` todos vazios | caso sem asserção |
 | `contra-teste` preenchido com `nao-marca` vazio | a matriz contava a regra coberta sem asserção por trás |
-| regra fora de `PTC-1..8` | `PTC-9` caía num `.get(..., [])` e sumia |
+| regra fora de `PTC-1..9` | `PTC-10` caía num `.get(..., [])` e sumia. Regra nova muda `REGRAS` em `verify.py` |
 | `nivel` que não existe | ia para o prompt como nível inventado |
 
 ## Clean-state checklist
@@ -322,11 +328,12 @@ Antes de encerrar a sessão:
 ## Estrutura
 
 ```
-SKILL.md                  # 8 regras, 3 níveis, processo, formato de saída
+SKILL.md                  # 9 regras, 3 níveis, processo, formato de saída
 references/
   lexico.md               # evite→use, conectores, variante BR, siglas
   ortografia-ptbr.md      # Acordo de 1990, armadilhas de TI, o que não é erro
   ingles.md               # regras STE-EN, pipeline bilíngue, decalques
+  ruido-ia.md             # PTC-9: metatexto, enchimento, inflação (adaptado da deai-text)
 tests/
   verify.py               # runner
   legibilidade.py         # Flesch-PT (Martins 1996) sobre os contadores do textstat
@@ -357,4 +364,4 @@ nenhuma:** ela é Markdown.
 
 ## Origem das decisões
 
-O desenho — por que 8 regras próprias em vez de traduzir as 53 do ASD-STE100, por que a fonte de verdade é o idioma do input, por que os níveis existem — está em `README.md`, seções "Por que não é o STE traduzido" e "Modo bilíngue". Leia antes de propor mudança estrutural; várias alternativas óbvias já foram descartadas com evidência.
+O desenho — por que regras próprias em vez de traduzir as 53 do ASD-STE100, por que a fonte de verdade é o idioma do input, por que os níveis existem — está em `README.md`, seções "Por que não é o STE traduzido" e "Modo bilíngue". Leia antes de propor mudança estrutural; várias alternativas óbvias já foram descartadas com evidência.

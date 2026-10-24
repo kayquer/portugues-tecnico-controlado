@@ -218,6 +218,15 @@ def teste_metrica_sem_texto_final():
                                   "não dá para medir")], falhas
 
 
+def teste_texto_final_para_em_a_confirmar():
+    """"A confirmar" repete o marcador como pergunta, sem ser texto reescrito.
+    Se a janela não parasse nela, `nao-marca` acharia o termo na pergunta e
+    a métrica mediria a lista de perguntas. Vale com ou sem "Mantido"."""
+    saida = ("**Texto final:**\nFaça o backup.\n\n"
+             "**A confirmar:** quem faz o backup do banco de dados?\n")
+    assert verify.texto_final(saida).strip() == "Faça o backup."
+
+
 def teste_gate_metrica_reprova_e_aprova():
     """O par. Só o lado que reprova deixaria passar um gate travado em vermelho."""
     exigente, _ = verify.avaliar(caso_falso(flesch_min=90, pal_frase_max=5), DIFICIL)
@@ -292,8 +301,14 @@ COLISOES = {
 }
 
 
+# Arquivos com tabela evite→use. `ruido-ia.md` (PTC-9) entra pelo mesmo motivo
+# do léxico: vai concatenado no prompt, e um termo que ele manda cortar e o
+# SKILL.md prescreve como ✅ é a mesma oscilação do `apenas`.
+TABELAS_EVITE = ("references/lexico.md", "references/ruido-ia.md")
+
+
 def termos_do_lexico():
-    """Coluna "Evite" das tabelas evite→use do `lexico.md`.
+    """Coluna "Evite" das tabelas evite→use de `TABELAS_EVITE`.
 
     Termo com alguma linha cujo uso é `mantenha` fica **fora**: essa linha é a
     resolução da colisão, não uma exceção. Foi assim que `apenas` e `executar`
@@ -302,7 +317,11 @@ def termos_do_lexico():
     """
     evite = {}
     cabecalho = False
-    for linha in (verify.REPO / "references/lexico.md").read_text(encoding="utf-8").splitlines():
+    linhas = []
+    for arquivo in TABELAS_EVITE:
+        # Linha vazia entre arquivos: fecha a tabela do anterior.
+        linhas += (verify.REPO / arquivo).read_text(encoding="utf-8").splitlines() + [""]
+    for linha in linhas:
         if not linha.startswith("|"):
             cabecalho = False
             continue
