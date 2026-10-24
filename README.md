@@ -1,5 +1,9 @@
 # Português Técnico Controlado (PTC)
 
+[![Página de instalação](https://img.shields.io/badge/instalar-guia%20por%20ferramenta-1f6feb?style=for-the-badge)](https://kayquer.github.io/portugues-tecnico-controlado/)
+
+> **Instalar:** a **[página de instalação](https://kayquer.github.io/portugues-tecnico-controlado/)** tem o comando ou o botão de copiar para cada ferramenta: Claude Code, Claude.ai, Cursor, Codex, Gemini CLI, ChatGPT e Perplexity.
+
 Skill do [Claude Code](https://claude.com/claude-code) que reescreve texto técnico em português do Brasil para que ele tenha **uma leitura só**.
 
 Quem executa um procedimento não pode parar para perguntar "você quis dizer X ou Y?". Um modelo que consome uma instrução também não. O texto precisa responder antes.
@@ -139,6 +143,10 @@ O português esconde informação em lugares onde o inglês obriga a declarar.
 ---
 
 ## Instalação
+
+Guia passo a passo para cada ferramenta: **[kayquer.github.io/portugues-tecnico-controlado](https://kayquer.github.io/portugues-tecnico-controlado/)**.
+
+No Claude Code:
 
 ```bash
 git clone https://github.com/kayquer/portugues-tecnico-controlado ~/.claude/skills/portugues-tecnico-controlado
