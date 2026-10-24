@@ -37,7 +37,7 @@ Estas regras parafraseiam as **categorias** do ASD-STE100 (Simplified Technical 
 
 Ordem serial obrigatória. **Não normalize os dois idiomas em paralelo** a partir do original bruto — cada conjunto de regras puxa para um lado e as duas versões passam a afirmar coisas diferentes. Esse é o risco maior, mais do que o round-trip.
 
-1. **Reescreva na língua fonte**, sob as regras dela. A fonte é sempre **o idioma do input**: texto em inglês → regras STE acima; texto em português → as 8 regras PTC. Esse texto vira a verdade.
+1. **Reescreva na língua fonte**, sob as regras dela. A fonte é sempre **o idioma do input**: texto em inglês → regras STE acima; texto em português → as 9 regras PTC. Esse texto vira a verdade.
 2. **Traduza o texto já controlado** — nunca o original bruto.
 3. **Aplique as regras da língua alvo** só onde não alterem a proposição.
 

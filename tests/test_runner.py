@@ -301,8 +301,14 @@ COLISOES = {
 }
 
 
+# Arquivos com tabela evite→use. `ruido-ia.md` (PTC-9) entra pelo mesmo motivo
+# do léxico: vai concatenado no prompt, e um termo que ele manda cortar e o
+# SKILL.md prescreve como ✅ é a mesma oscilação do `apenas`.
+TABELAS_EVITE = ("references/lexico.md", "references/ruido-ia.md")
+
+
 def termos_do_lexico():
-    """Coluna "Evite" das tabelas evite→use do `lexico.md`.
+    """Coluna "Evite" das tabelas evite→use de `TABELAS_EVITE`.
 
     Termo com alguma linha cujo uso é `mantenha` fica **fora**: essa linha é a
     resolução da colisão, não uma exceção. Foi assim que `apenas` e `executar`
@@ -311,7 +317,11 @@ def termos_do_lexico():
     """
     evite = {}
     cabecalho = False
-    for linha in (verify.REPO / "references/lexico.md").read_text(encoding="utf-8").splitlines():
+    linhas = []
+    for arquivo in TABELAS_EVITE:
+        # Linha vazia entre arquivos: fecha a tabela do anterior.
+        linhas += (verify.REPO / arquivo).read_text(encoding="utf-8").splitlines() + [""]
+    for linha in linhas:
         if not linha.startswith("|"):
             cabecalho = False
             continue

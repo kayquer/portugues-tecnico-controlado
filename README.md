@@ -8,7 +8,7 @@ Skill do [Claude Code](https://claude.com/claude-code) que reescreve texto técn
 
 Quem executa um procedimento não pode parar para perguntar "você quis dizer X ou Y?". Um modelo que consome uma instrução também não. O texto precisa responder antes.
 
-Inspirado no [ASD-STE100](https://www.asd-ste100.org/), o padrão de linguagem controlada da indústria aeroespacial. Não é uma tradução dele. O STE resolve os problemas do inglês, e o maior problema do português nem aparece lá: o inglês obriga o sujeito, então o padrão nunca precisou de uma regra para isso. As 8 regras daqui foram escritas do zero, e o porquê está no fim.
+Inspirado no [ASD-STE100](https://www.asd-ste100.org/), o padrão de linguagem controlada da indústria aeroespacial. Não é uma tradução dele. O STE resolve os problemas do inglês, e o maior problema do português nem aparece lá: o inglês obriga o sujeito, então o padrão nunca precisou de uma regra para isso. As 9 regras daqui foram escritas para o português, e o porquê está no fim.
 
 ---
 
@@ -201,28 +201,30 @@ Quando você não especifica, a skill classifica o nível de rigor e o destinat�
 
 ---
 
-## As 8 regras
+## As 9 regras
 
-PTC-1 a PTC-5 tratam de **desambiguação** e exigem julgamento. PTC-6 a PTC-8 tratam de **consistência**, funcionam de forma mecânica, e nunca relaxam.
+PTC-1 a PTC-5 tratam de **desambiguação** e exigem julgamento. PTC-6 a PTC-8 tratam de **consistência**, funcionam de forma mecânica, e nunca relaxam. A PTC-9 trata de **sinal**: corta o trecho que não afirma nada, o enchimento típico de texto gerado por modelo.
 
 | | Regra | Resumo |
 |---|---|---|
 | **PTC-1** | Quem faz, aparece | Sujeito explícito. Sem `-se` apassivador, sem `o mesmo`, sem clítico de 3ª pessoa. |
 | **PTC-2** | Uma proposição por frase, uma forma verbal | Imperativo para instrução, presente 3ª pessoa para comportamento. Sem gerúndio conector. |
-| **PTC-3** | Modalidade e quantidade explícitas | `deve` = obrigação. Probabilidade nunca por modal. Quantificador vago vira número. |
+| **PTC-3** | Modalidade e quantidade explícitas | `deve` = obrigação. Probabilidade nunca por modal. Quantificador vago vira o número da fonte, ou `[a confirmar]`. |
 | **PTC-4** | Verbo pleno, não verbo-suporte | `realizar a validação` → `validar`. |
 | **PTC-5** | Sintaxe plana | Adjetivo pós-nominal. Cadeia de `de` ≤ 2. Nada entre verbo e objeto. |
 | **PTC-6** | Termos congelados, variante BR | Um conceito, um termo. Fixa o português brasileiro. |
 | **PTC-7** | Formato de número, data e unidade | Vírgula decimal em PT. Datas em ISO 8601 nos dois idiomas. |
 | **PTC-8** | Ortografia PT-BR vigente | Acordo de 1990, obrigatório no Brasil desde 2016-01-01. |
+| **PTC-9** | Sem ruído de texto gerado | Sem `Claro!`, `Espero ter ajudado`, `Além disso` de enchimento, `robusto` sem critério, `estudos mostram` sem fonte. |
 
-Três delas, em uma linha cada:
+Quatro delas, em uma linha cada:
 
 | Regra | Original | Reescrito |
 |---|---|---|
 | **PTC-1** | `Envia o e-mail e atualiza o status.` | `O serviço envia o e-mail. O worker atualiza o status.` |
 | **PTC-3** | `O processo deve terminar em 5 minutos.` | `O processo termina em até 5 minutos.` |
 | **PTC-5** | `a validação do cadastro do cliente do contrato` | `Valide o cadastro. Esse cadastro pertence ao cliente do contrato.` |
+| **PTC-9** | `Além disso, vale destacar que a solução conta com uma arquitetura robusta de microsserviços.` | `A solução tem arquitetura de microsserviços.` |
 
 A PTC-8 é higiene, não o ponto da skill: o Acordo de 1990 é regra fechada, e um corretor resolve boa parte dele. Fica porque um caso concentra quase todo o erro em texto de TI — prefixo terminado em vogal + palavra começada por `r` ou `s` junta e dobra a consoante (`micro-serviço` → **microsserviço**, `auto-serviço` → **autosserviço**, `anti-racismo` → **antirracismo**). O resto do Acordo, a acentuação e as armadilhas de vocabulário técnico ficam em [`references/ortografia-ptbr.md`](references/ortografia-ptbr.md), carregado sob demanda.
 
@@ -322,11 +324,12 @@ Traduzir as 53 regras do ASD-STE100 uma a uma não funciona, por duas razões si
 
 ```
 portugues-tecnico-controlado/
-├── SKILL.md                        # 8 regras, 3 níveis, processo, formato de saída
+├── SKILL.md                        # 9 regras, 3 níveis, processo, formato de saída
 ├── references/
 │   ├── lexico.md                   # evite→use, conectores ambíguos, variante BR, siglas
 │   ├── ortografia-ptbr.md          # Acordo de 1990, armadilhas de TI, o que não é erro
-│   └── ingles.md                   # regras STE-EN, pipeline bilíngue, decalques e falsos amigos
+│   ├── ingles.md                   # regras STE-EN, pipeline bilíngue, decalques e falsos amigos
+│   └── ruido-ia.md                 # PTC-9: metatexto, enchimento, inflação, atribuição vaga
 ├── dist/                           # versões portáteis, geradas — não edite à mão
 ├── docs/index.html                 # página de instalação, gerada — não edite à mão
 ├── tools/build.py                  # gera dist/ e docs/ a partir da skill
@@ -379,7 +382,7 @@ Uma skill é um prompt, e prompt não tem compilador. Não existe erro de sintax
 
 O ponto de partida foi o ASD-STE100 — o inglês técnico simplificado da indústria aeroespacial. Traduzir as 53 regras dele não funciona, e a seção [Por que não é o STE traduzido](#por-que-não-é-o-ste-traduzido) explica por quê: metade vira regra vazia em português, e os vícios que mais causam ambiguidade em português (sujeito nulo, `-se` apassivador, posição do adjetivo, escopo decidido por vírgula) o STE nunca precisou cobrir, porque o inglês obriga o sujeito.
 
-As 8 regras foram escritas do zero contra as características reais do idioma. Não existe norma equivalente para o português — nem da ABNT, nem da ASD — então isto não implementa um padrão, aplica o princípio da linguagem controlada.
+As regras PTC-1 a PTC-8 foram escritas do zero contra as características reais do idioma. A PTC-9 veio depois, adaptada da [deai-text](https://github.com/kayquer/deai-text) (ver Créditos). Não existe norma equivalente para o português — nem da ABNT, nem da ASD — então isto não implementa um padrão, aplica o princípio da linguagem controlada.
 
 ### O harness não compara texto
 
@@ -450,6 +453,8 @@ Três pontos a pesquisa não confirmou, e a skill trata como convenção em vez 
 ## Créditos
 
 O conceito de aplicar o ASD-STE100 como skill de agente veio de [danyuchn/asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill) (MIT). Este projeto reescreve as regras do zero para o português e não compartilha código com ele.
+
+A PTC-9 adapta o catálogo de padrões de escrita de IA da [deai-text](https://github.com/kayquer/deai-text), do mesmo autor. Ficou só o que serve a texto técnico e não contradiz as outras regras: o "varie o ritmo e tenha opinião" de lá não entrou, porque em `estrito` a forma neutra é o objetivo.
 
 O ASD-STE100 pertence à [ASD](https://www.asd-europe.org/), AeroSpace and Defence Industries Association of Europe. Este projeto não tem vínculo com a ASD e não distribui o conteúdo do padrão.
 

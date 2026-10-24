@@ -1,7 +1,7 @@
 ---
 name: portugues-tecnico-controlado
-description: "Reescreve texto técnico em português do Brasil para ter uma leitura só — tira sujeito oculto, -se apassivador, modal que é obrigação e probabilidade ao mesmo tempo, e escopo decidido por vírgula. Congela terminologia, formato de número e data, e ortografia. Gera par EN/PT quando preciso. Triggers - 'português controlado', 'PTC', 'tira a ambiguidade', 'simplifica esse procedimento', 'reescreve esse runbook', 'versão em EN e PT', 'revisa esse comunicado', 'linguagem controlada', 'esse texto tem duas leituras', 'escreve isso pra um agente ler'."
-version: 1.1.0
+description: "Reescreve texto técnico em português do Brasil para ter uma leitura só — tira sujeito oculto, -se apassivador, modal que é obrigação e probabilidade ao mesmo tempo, e escopo decidido por vírgula. Congela terminologia, formato de número e data, e ortografia. Corta o enchimento de texto gerado por IA sem inventar fato. Gera par EN/PT quando preciso. Triggers - 'português controlado', 'PTC', 'tira a ambiguidade', 'simplifica esse procedimento', 'reescreve esse runbook', 'versão em EN e PT', 'revisa esse comunicado', 'linguagem controlada', 'esse texto tem duas leituras', 'escreve isso pra um agente ler', 'tira a cara de IA desse procedimento', 'essa doc parece escrita pelo ChatGPT'."
+version: 1.2.0
 ---
 
 <!--
@@ -36,10 +36,11 @@ Nunca comece a reescrever sem fixar estes três parâmetros. Se o usuário não 
 2. **Destinatário** (só importa em `estrito`): `humano` · `agente`
 3. **Bilíngue?**: se sim, carregue `references/ingles.md` **antes** de mexer no texto — o pipeline tem ordem obrigatória e refazer custa caro.
 
-## As 8 regras
+## As 9 regras
 
 PTC-1 a PTC-5 são de **desambiguação** — atacam onde o português deixa duas leituras. Exigem julgamento.
 PTC-6 a PTC-8 são de **consistência** — terminologia, formato, grafia. São mecânicas e nunca relaxam.
+PTC-9 é de **sinal** — tira o trecho que não carrega proposição, o enchimento típico de texto gerado por modelo.
 
 ### PTC-1 — Quem faz, aparece
 
@@ -169,6 +170,39 @@ Casos de detalhe, armadilhas de TI e a lista do que **não** é erro: **`referen
 
 **Fronteira com a PTC-6.** Plural de sigla (`API's` → `APIs`), gênero e artigo de sigla e variante BR (`ficheiro` → `arquivo`) **parecem** ortografia e não são: rotule como **PTC-6**. Aqui só entra o que o Acordo de 1990 decide — hífen, acento, trema, grafia da palavra comum.
 
+### PTC-9 — Sem ruído de texto gerado
+
+Texto escrito por modelo tem vícios próprios, e nenhum deles cria duas leituras: eles ocupam espaço sem afirmar nada. O teste é um só: **se o trecho sai e nenhum fato, condição ou instrução se perde, ele é ruído.** O leitor de procedimento lê tudo, e cada frase vazia custa atenção que a condição de segurança da frase seguinte precisava.
+
+**Sempre sai, nos três níveis:**
+- **Artefato de chatbot e metatexto:** `Claro!`, `Ótima pergunta`, `Espero ter ajudado`, `Vamos lá`, `Neste documento, vamos explorar…`, `Fique à vontade para…`, `Em resumo, vimos que…`.
+- **Aviso de limite do modelo:** `Com base nas informações disponíveis`, `Até onde sei`.
+- **Conclusão genérica:** `O futuro é promissor`, `Só o tempo dirá`, `Uma coisa é certa`.
+
+**Sai em `estrito` e `descritivo`, recomendado em `leve`:**
+- **Transição de enchimento:** `Além disso`, `Ademais`, `Nesse sentido`, `Dessa forma` *(sem relação causal real)*, `Quando se trata de`, `No cenário atual`, `Em suma`. Se a frase seguinte já é a próxima ideia, o conector sai. Se ele diz uma relação lógica real, use o conector exato (`porque`, `por isso`, `mas`).
+- **Calibração de confiança:** `Notavelmente`, `Curiosamente`, `Sem dúvida`, `De fato`, `Vale destacar que`. O fato não fica mais verdadeiro com o advérbio.
+- **Atribuição vaga:** `Estudos mostram`, `Especialistas apontam`, `É sabido que`. Cite a fonte ou corte a atribuição. É a PTC-1 aplicada a quem afirma.
+- **Evasão de cópula:** `atua como`, `se configura como`, `conta com`, `dispõe de`, `apresenta` *(no sentido de "tem")* → `é`, `tem`.
+- **Inflação:** `robusto`, `abrangente`, `de ponta`, `sem atrito`, `alavancar`, `potencializar`, `divisor de águas`, `revolucionário`, `crucial`, `fundamental`. Troque por critério verificável (`aceita 10.000 requisições por segundo`) ou corte. Sem critério na fonte, não invente um: corte o adjetivo.
+- **Contraste fabricado:** `Não é só X, é Y`, quando ninguém disse que era só X. Afirme Y.
+
+> ❌ Além disso, vale destacar que a solução conta com uma arquitetura robusta de microsserviços que potencializa a escalabilidade.
+> ✅ A solução tem arquitetura de microsserviços. *(o resto não afirmava nada que dê para conferir)*
+
+> ❌ Ótima pergunta! Para reiniciar o serviço, execute o comando abaixo. Espero ter ajudado!
+> ✅ Para reiniciar o serviço, execute o comando abaixo.
+
+**Densidade, não caça à palavra.** Os itens de inflação e de transição viram violação pela recorrência ou pelo vazio, não pela presença. Um `Dessa forma` que marca consequência real fica, ou vira `Por isso`. Termo técnico também fica: `estimador robusto`, `teorema fundamental`, `cobertura abrangente de testes` quando o texto diz qual é a cobertura. Antes de cortar, faça o teste da regra: o que se perde?
+
+**A própria saída da skill segue a PTC-9.** Nada de `Claro! Aqui está o texto revisado` antes da tabela, e nada de `Espero que ajude` depois do texto final. Negrito em frase inteira, emoji em título e título genérico (`Visão geral`, `Conclusão`) também ficam de fora do que a skill escreve.
+
+**Fronteira com outras regras.** Rodízio de sinônimos para o mesmo conceito é **PTC-6**. Gerúndio em cadeia (`…, refletindo X e evidenciando Y`) é **PTC-2**. Hedge (`talvez`, `pode ser que`) é **PTC-3**. Rotule com a regra de lá e use a PTC-9 só para o que nenhuma outra cobre.
+
+**O que a PTC-9 não pede.** Guias de "humanizar texto de IA" mandam variar o tamanho das frases, ter opinião e escrever em 1ª pessoa. Isso contradiz `estrito`, em que a forma uniforme e neutra é o objetivo. Em `leve`, a 1ª pessoa já é permitida pela tabela de níveis. A PTC-9 tira o ruído e não acrescenta voz.
+
+Catálogo evite → use completo: **`references/ruido-ia.md`**.
+
 ## Níveis
 
 | | `estrito` | `descritivo` | `leve` |
@@ -189,13 +223,15 @@ Casos de detalhe, armadilhas de TI e a lista do que **não** é erro: **`referen
 | PTC-6 léxico evite→use | obrigatório | obrigatório | **dispensado** |
 | PTC-7 número/data/unidade | obrigatório | obrigatório | obrigatório |
 | PTC-8 ortografia | obrigatório | obrigatório | obrigatório |
+| PTC-9 artefato de chatbot, conclusão genérica | obrigatório | obrigatório | obrigatório |
+| PTC-9 enchimento, inflação, atribuição vaga | obrigatório | obrigatório | recomendado |
 | Voz passiva | proibida | ok sem ator relevante | livre |
 | Lista vertical p/ sequência ≥3 | obrigatório | recomendado | dispensado |
 | ≤6 frases/parágrafo | obrigatório | obrigatório | recomendado |
 | Condição/segurança abre a frase | obrigatório | obrigatório | obrigatório |
 | 1ª pessoa (`nós`, `nosso time`) | proibida | evitar | **permitida e desejável** |
 
-**PTC-1, PTC-7 e PTC-8 nunca relaxam.** Em comunicado, `o mesmo foi cancelado`, `1,000 clientes` e `infra-estrutura` continuam causando dano — ortografia errada não fica menos errada porque o texto é informal.
+**PTC-1, PTC-7 e PTC-8 nunca relaxam.** Em comunicado, `o mesmo foi cancelado`, `1,000 clientes` e `infra-estrutura` continuam causando dano — ortografia errada não fica menos errada porque o texto é informal. Da PTC-9, artefato de chatbot e conclusão genérica também não relaxam: um `Espero ter ajudado!` não tem informação em nível nenhum.
 
 O resto sai justamente para o comunicado **não ficar robótico**. Aplicar rigor de procedimento a texto para humano não-técnico é o erro clássico de quem adota linguagem controlada.
 
@@ -298,3 +334,4 @@ Sobre a prática da indústria: a **Embraer escreve** a documentação dos E-Jet
 - **`references/lexico.md`** — evite→use, conectores ambíguos, variante BR, siglas
 - **`references/ortografia-ptbr.md`** — Acordo de 1990 em detalhe, armadilhas de TI, o que não é erro
 - **`references/ingles.md`** — regras do lado inglês, pipeline bilíngue, tabela de proposições, decalques EN→PT
+- **`references/ruido-ia.md`** — catálogo da PTC-9: metatexto, enchimento, inflação, atribuição vaga, evasão de cópula
