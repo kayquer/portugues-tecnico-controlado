@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc">
+  <title id="title">Português Técnico Controlado</title>
+  <desc id="desc">Skill que reescreve texto técnico em português do Brasil para ter uma leitura só. As 9 regras: PTC-1 sujeito explícito; PTC-2 uma proposição por frase; PTC-3 modal explícito; PTC-4 verbo pleno; PTC-5 sintaxe plana (desambiguação). PTC-6 termos congelados; PTC-7 número e data; PTC-8 ortografia PT-BR (consistência). PTC-9 sem ruído de IA (sinal).</desc>
+
+  <rect width="1200" height="440" rx="24" fill="#0F1720"/>
+
+  <g id="title-block" transform="translate(64 0)">
+    <text x="0" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18" letter-spacing="1.5" fill="#7D8A99">SKILL · PT-BR · BASE NO ASD-STE100</text>
+    <g font-family="Georgia, 'Times New Roman', serif" font-size="50" font-weight="700" fill="#E6EDF3">
+      <text x="-2" y="166">Português Técnico</text>
+      <text x="-2" y="226">Controlado</text>
+    </g>
+    <rect x="0" y="248" width="72" height="6" rx="3" fill="#58A6FF"/>
+    <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" fill="#C9D3DD">
+      <text x="0" y="304">Reescreve texto técnico para</text>
+      <text x="0" y="340">ter uma leitura só.</text>
+    </g>
+    <text x="0" y="384" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17" fill="#7D8A99">3 níveis de rigor · modo EN/PT</text>
+  </g>
+
+  <g id="rules" transform="translate(588 56)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+    <g fill="#16212D" stroke="#263241" stroke-width="1.5">
+      <rect x="0" y="0" width="176" height="86" rx="10"/>
+      <rect x="188" y="0" width="176" height="86" rx="10"/>
+      <rect x="376" y="0" width="176" height="86" rx="10"/>
+      <rect x="0" y="98" width="176" height="86" rx="10"/>
+      <rect x="188" y="98" width="176" height="86" rx="10"/>
+      <rect x="376" y="98" width="176" height="86" rx="10"/>
+      <rect x="0" y="196" width="176" height="86" rx="10"/>
+      <rect x="188" y="196" width="176" height="86" rx="10"/>
+      <rect x="376" y="196" width="176" height="86" rx="10"/>
+    </g>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="19" font-weight="700">
+      <text x="18" y="34" fill="#58A6FF">PTC-1</text>
+      <text x="206" y="34" fill="#58A6FF">PTC-2</text>
+      <text x="394" y="34" fill="#58A6FF">PTC-3</text>
+      <text x="18" y="132" fill="#58A6FF">PTC-4</text>
+      <text x="206" y="132" fill="#58A6FF">PTC-5</text>
+      <text x="394" y="132" fill="#3FB9A5">PTC-6</text>
+      <text x="18" y="230" fill="#3FB9A5">PTC-7</text>
+      <text x="206" y="230" fill="#3FB9A5">PTC-8</text>
+      <text x="394" y="230" fill="#E3A84A">PTC-9</text>
+    </g>
+    <g font-size="19" fill="#E6EDF3">
+      <text x="18" y="66">Sujeito explícito</text>
+      <text x="206" y="66">Uma ideia/frase</text>
+      <text x="394" y="66">Modal explícito</text>
+      <text x="18" y="164">Verbo pleno</text>
+      <text x="206" y="164">Sintaxe plana</text>
+      <text x="394" y="164">Termo congelado</text>
+      <text x="18" y="262">Número e data</text>
+      <text x="206" y="262">Ortografia BR</text>
+      <text x="394" y="262">Sem ruído de IA</text>
+    </g>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">
+      <circle cx="6" cy="318" r="6" fill="#58A6FF"/>
+      <text x="20" y="324" fill="#7D8A99">desambiguação</text>
+      <circle cx="202" cy="318" r="6" fill="#3FB9A5"/>
+      <text x="216" y="324" fill="#7D8A99">consistência</text>
+      <circle cx="388" cy="318" r="6" fill="#E3A84A"/>
+      <text x="402" y="324" fill="#7D8A99">sinal</text>
+    </g>
+  </g>
+</svg>

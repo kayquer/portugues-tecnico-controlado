@@ -1,14 +1,20 @@
-# Português Técnico Controlado (PTC)
-
-[![Página de instalação](https://img.shields.io/badge/instalar-guia%20por%20ferramenta-1f6feb?style=for-the-badge)](https://kayquer.github.io/portugues-tecnico-controlado/)
-
-> **Instalar:** a **[página de instalação](https://kayquer.github.io/portugues-tecnico-controlado/)** tem o comando ou o botão de copiar para cada ferramenta: Claude Code, Claude.ai, Cursor, Codex, Gemini CLI, ChatGPT e Perplexity.
+<p align="center">
+  <img src="docs/assets/hero.svg" width="100%" alt="Português Técnico Controlado (PTC): reescreve texto técnico para ter uma leitura só. As 9 regras, de PTC-1 a PTC-9, agrupadas em desambiguação, consistência e sinal">
+</p>
 
 Skill do [Claude Code](https://claude.com/claude-code) que reescreve texto técnico em português do Brasil para que ele tenha **uma leitura só**.
 
 Quem executa um procedimento não pode parar para perguntar "você quis dizer X ou Y?". Um modelo que consome uma instrução também não. O texto precisa responder antes.
 
 Inspirado no [ASD-STE100](https://www.asd-ste100.org/), o padrão de linguagem controlada da indústria aeroespacial. Não é uma tradução dele. O STE resolve os problemas do inglês, e o maior problema do português nem aparece lá: o inglês obriga o sujeito, então o padrão nunca precisou de uma regra para isso. As 9 regras daqui foram escritas para o português, e o porquê está no fim.
+
+No Claude Code:
+
+```bash
+git clone https://github.com/kayquer/portugues-tecnico-controlado ~/.claude/skills/portugues-tecnico-controlado
+```
+
+Para Claude.ai, Cursor, Codex, Gemini CLI, ChatGPT e Perplexity, a **[página de instalação](https://kayquer.github.io/portugues-tecnico-controlado/)** tem o comando ou o botão de copiar de cada um.
 
 ---
 
