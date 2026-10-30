@@ -2,7 +2,9 @@
   <img src="docs/assets/hero.svg" width="100%" alt="Português Técnico Controlado (PTC): reescreve texto técnico para ter uma leitura só. As 9 regras, de PTC-1 a PTC-9, agrupadas em desambiguação, consistência e sinal">
 </p>
 
-Skill do [Claude Code](https://claude.com/claude-code) que reescreve texto técnico em português do Brasil para que ele tenha **uma leitura só**.
+# Português Técnico Controlado (PTC)
+
+O **Português Técnico Controlado (PTC)** é uma skill do [Claude Code](https://claude.com/claude-code) que reescreve texto técnico em português do Brasil para que ele tenha **uma leitura só**. Também funciona no Claude.ai, Cursor, Codex, Gemini CLI, ChatGPT e Perplexity.
 
 Quem executa um procedimento não pode parar para perguntar "você quis dizer X ou Y?". Um modelo que consome uma instrução também não. O texto precisa responder antes.
 
@@ -441,6 +443,28 @@ O valor do harness não é o verde. É isto:
 | Um limiar de legibilidade falhava 28% das vezes | `FLAKY` na suite; a calibração tinha ignorado duas medições avulsas discordantes |
 
 Nenhum desses aparece lendo o código. Todos apareceram porque existia um número para conferir e uma condição de parada que não aceitava opinião.
+
+---
+
+## Perguntas frequentes
+
+**O PTC é uma tradução do ASD-STE100 (Simplified Technical English)?**
+Não. As 9 regras foram escritas para o português. Metade das regras do STE fica vazia em português, e o maior problema do português, o sujeito nulo, não aparece no STE. Ver [Por que não é o STE traduzido](#por-que-não-é-o-ste-traduzido).
+
+**Existe uma norma de português técnico simplificado?**
+Não. Não há "Simplified Technical Portuguese" da ASD, da ABNT nem da ABRAT. O PTC aplica o princípio da linguagem controlada ao português e não implementa uma norma.
+
+**Para que tipo de texto serve?**
+Runbook, procedimento, tutorial, documentação de sistema, comunicado interno e instrução para agente de IA. Não serve para texto criativo nem copy de marketing.
+
+**Em quais ferramentas funciona?**
+Claude Code, Claude.ai, Cursor, Codex, Gemini CLI, ChatGPT e Perplexity. A [página de instalação](https://kayquer.github.io/portugues-tecnico-controlado/) tem o passo de cada uma.
+
+**Precisa instalar alguma dependência?**
+Não. A skill é Markdown: nenhum pacote, nenhuma outra skill, nenhuma chamada de rede. Python só entra no harness de testes.
+
+**Qual a diferença para o deai-text?**
+O PTC deixa texto técnico com uma leitura só. O [deai-text](https://github.com/kayquer/deai-text) remove padrões de escrita de IA de qualquer texto. A PTC-9 adapta o catálogo do deai-text para texto técnico.
 
 ---
 
