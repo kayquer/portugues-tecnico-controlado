@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "portugues-tecnico-controlado",
+  "description": "Controlled technical Portuguese (PTC): rewrite pt-BR technical text so it has a single reading.",
+  "owner": {
+    "name": "Kayque Rotondo",
+    "url": "https://github.com/kayquer"
+  },
+  "plugins": [
+    {
+      "name": "portugues-tecnico-controlado",
+      "description": "Rewrites pt-BR technical text with 9 controlled-language rules, frozen terminology and AI-filler removal. Regression suite included.",
+      "source": "./",
+      "category": "writing"
+    }
+  ]
+}

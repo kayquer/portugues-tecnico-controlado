@@ -1,0 +1,14 @@
+{
+  "name": "portugues-tecnico-controlado",
+  "version": "1.2.0",
+  "description": "Rewrites Brazilian Portuguese technical text so it has a single reading: 9 controlled-language rules (PTC-1 to PTC-9), frozen terminology, AI-filler removal and EN/PT pairs.",
+  "author": {
+    "name": "Kayque Rotondo",
+    "url": "https://github.com/kayquer"
+  },
+  "homepage": "https://kayquer.github.io/portugues-tecnico-controlado/",
+  "repository": "https://github.com/kayquer/portugues-tecnico-controlado",
+  "license": "MIT",
+  "keywords": ["portuguese", "pt-br", "controlled-language", "technical-writing", "runbook", "documentation", "ste100"],
+  "skills": ["."]
+}
