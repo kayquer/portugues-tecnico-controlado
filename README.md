@@ -16,6 +16,12 @@ No Claude Code:
 git clone https://github.com/kayquer/portugues-tecnico-controlado ~/.claude/skills/portugues-tecnico-controlado
 ```
 
+Ou como plugin:
+
+```
+/plugin install portugues-tecnico-controlado --marketplace kayquer/portugues-tecnico-controlado
+```
+
 Para Claude.ai, Cursor, Codex, Gemini CLI, ChatGPT e Perplexity, a **[página de instalação](https://kayquer.github.io/portugues-tecnico-controlado/)** tem o comando ou o botão de copiar de cada um.
 
 ---
