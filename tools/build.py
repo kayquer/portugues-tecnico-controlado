@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Gera as versões portáteis da skill a partir de SKILL.md + references/.
 
-A skill é escrita para o Claude Code: frontmatter YAML e `references/` carregadas
-sob demanda por caminho relativo. Fora dali nada disso existe, então o bundle
-achatado precisa de três consertos — tirar o frontmatter, tirar o aviso de edição,
-e reescrever os caminhos que apontariam para arquivos ausentes.
+A skill mora em `skills/portugues-tecnico-controlado/`, o layout que Claude Code,
+Codex, Hermes e OpenClaw aceitam como plugin. Ela é escrita para agentes com
+skills: frontmatter YAML e `references/` carregadas sob demanda por caminho
+relativo. Fora dali nada disso existe, então o bundle achatado precisa de dois
+consertos — tirar o frontmatter e reescrever os caminhos que apontariam para
+arquivos ausentes.
 
   python3 tools/build.py              escreve dist/ e docs/index.html
   python3 tools/build.py --verificar  não escreve; exit 1 se algo estiver defasado
@@ -17,12 +19,17 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+SKILL = "skills/portugues-tecnico-controlado"
 ORIGEM = "https://github.com/kayquer/portugues-tecnico-controlado"
 
 # Seções que o compacto corta. Se uma delas sumir do SKILL.md, o build morre em
 # vez de emitir um bundle silenciosamente truncado — renomear um H2 passa a ser
 # um erro visível.
-CORTA_NO_COMPACTO = ("Por que não é o STE traduzido", "Limites", "Referências")
+CORTA_NO_COMPACTO = ("Requisitos", "Limites", "Problemas comuns", "Referências")
+# O texto completo das regras mora em references/ desde a v1.3, para o SKILL.md
+# caber no limite de leitura do OpenClaw. O compacto continua levando as regras
+# inteiras (sem os exemplos), como levava quando elas estavam no SKILL.md.
+REGRAS_NO_COMPACTO = ("regras-desambiguacao.md", "regras-consistencia.md")
 # Do léxico o compacto leva as duas tabelas que substituem o dicionário da ASD,
 # mais as siglas: a PTC-6 manda aplicar o glossário de siglas por nome, e sem a
 # seção o compacto prometeria uma coisa que não está nele.
@@ -112,6 +119,13 @@ def monta_compacto(skill_corpo, refs):
     if faltando:
         erro(f"seção que o compacto corta não existe mais no SKILL.md: {sorted(faltando)}")
 
+    regras = []
+    for arquivo in REGRAS_NO_COMPACTO:
+        r = next((r for r in refs if r["arquivo"] == arquivo), None)
+        if r is None:
+            erro(f"references/{arquivo} sumiu — o compacto depende dele")
+        regras.append(r["texto"].rstrip() + "\n\n")
+
     lexico = next((r for r in refs if r["arquivo"] == "lexico.md"), None)
     if lexico is None:
         erro("references/lexico.md sumiu — o compacto depende dele")
@@ -124,8 +138,9 @@ def monta_compacto(skill_corpo, refs):
     if faltando:
         erro(f"seção que o compacto mantém não existe mais no léxico: {sorted(faltando)}")
 
-    texto = "".join(blocos).rstrip() + "\n\n---\n\n# " + lexico["titulo"] + "\n\n" + "".join(tabelas)
-    texto = reescreve_caminhos(texto, refs, {"lexico.md"})
+    texto = ("".join(blocos).rstrip() + "\n\n---\n\n" + "---\n\n".join(regras)
+             + "---\n\n# " + lexico["titulo"] + "\n\n" + "".join(tabelas))
+    texto = reescreve_caminhos(texto, refs, {"lexico.md", *REGRAS_NO_COMPACTO})
     texto = "\n".join(l for l in texto.splitlines() if not EXEMPLO.match(l))
     # Cada exemplo removido deixa o buraco dele. Sem isso o compacto sai com
     # três e quatro linhas em branco seguidas onde havia um bloco ❌/✅.
@@ -142,16 +157,26 @@ def cabecalho(titulo, versao, subtitulo):
 
 
 def gerar():
-    campos, corpo = frontmatter(le("SKILL.md"))
-    versao = campos.get("version", "0.0.0")
-    descricao = campos.get("description", "").strip('"').split(" Triggers -")[0]
-
-    # Tira o aviso HTML para quem edita a skill: fora do repo ele não faz sentido
-    # e ainda manda o leitor abrir um AGENTS.md que ele não tem.
-    corpo = re.sub(r"^<!--.*?-->\n+", "", corpo, count=1, flags=re.DOTALL)
+    texto_skill = le(f"{SKILL}/SKILL.md")
+    campos, corpo = frontmatter(texto_skill)
+    # A versão fica em metadata.version: o campo `version` de topo não existe na
+    # especificação Agent Skills, e o Hermes só aceita metadata com valor string.
+    achou = re.search(r'^\s+version:\s*"?([^"\n]+)"?\s*$', texto_skill.split("\n---", 1)[0],
+                      re.MULTILINE)
+    if not achou:
+        erro("SKILL.md sem metadata.version")
+    versao = achou.group(1)
+    # A description abre com o gatilho ("Use quando…") e fecha com os pedidos
+    # típicos; o bundle quer só o que a skill faz.
+    descricao = campos.get("description", "").strip('"').split(" Pedidos típicos:")[0]
+    descricao = re.sub(r"^Use quando pedirem para tirar a ambiguidade de texto técnico em "
+                       r"português do Brasil: [^.]+\. ", "", descricao)
+    descricao = descricao.replace("Reescreve para", "Reescreve texto técnico em português do Brasil para", 1)
+    if not descricao.startswith("Reescreve texto técnico"):
+        erro("description mudou de forma — ajuste o recorte do subtítulo em build.py")
 
     refs = []
-    for p in sorted((REPO / "references").glob("*.md")):
+    for p in sorted((REPO / SKILL / "references").glob("*.md")):
         texto = p.read_text(encoding="utf-8")
         refs.append({"arquivo": p.name, "texto": texto,
                      "titulo": texto.splitlines()[0].lstrip("# ").strip()})

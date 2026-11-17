@@ -13,9 +13,12 @@ Os arquivos abaixo contêm violações deliberadas das próprias regras PTC. Ela
 | Arquivo | O que tem de errado de propósito |
 |---|---|
 | `tests/casos/*.md` | **texto 100% ruim.** É a entrada dos testes. Corrigir aqui faz os testes pararem de testar. |
-| `SKILL.md` | os exemplos marcados `❌` — `Faz-se a validação`, `o mesmo`, `micro-serviços`, `1.5 GB`, `um simples teste` |
+| `skills/portugues-tecnico-controlado/SKILL.md` | o lado esquerdo de cada `→` no índice das regras — `Faz-se o backup.`, `as API's`, `1.5 GB`, `micro-serviços` |
+| `references/regras-*.md` | os exemplos marcados `❌` — `Faz-se a validação`, `o mesmo`, `micro-serviços`, `1.5 GB`, `um simples teste` |
 | `README.md` | os blocos `Entrada:`, a coluna "Original" de toda tabela de exemplo, e a seção "O problema" |
 | `references/*.md` | as colunas "Evite" e "Errado" das tabelas — inclusive `ruido-ia.md`, cuja coluna "Evite" é texto de chatbot de propósito |
+
+`references/` aqui é sempre `skills/portugues-tecnico-controlado/references/`.
 
 Um agente que "melhora a qualidade do texto" deste repo quebra a skill **em silêncio**: os testes continuam rodando e passam a não detectar nada.
 
@@ -40,7 +43,7 @@ Uma mudança na skill só está pronta quando **as quatro** valem:
 1. `./init.sh` termina verde (exit 0).
 2. A mudança tem caso de teste — novo, ou um existente atualizado.
 3. Se a mudança criou ou ampliou uma regra, existe entrada em `nao-marca` de algum caso cobrindo o falso positivo correspondente.
-4. A regra continua com exemplo antes/depois no `SKILL.md`.
+4. A regra continua com exemplo antes/depois no índice do `SKILL.md` e no arquivo dela em `references/regras-*.md`.
 
 O item 3 é o que mais escapa. Ampliar uma regra quase sempre cria falso positivo, e um caso que só testa o acerto positivo não pega isso. Exemplo real: ampliar a PTC-8 para hifenizar mais prefixos pode fazer a skill "corrigir" `front-end`, que é convenção de estilo e não erro.
 
@@ -56,7 +59,10 @@ Se a mudança toca mais de uma regra, quebre em sessões e rode `./init.sh` entr
 
 | Item | Por quê |
 |---|---|
-| `description` do frontmatter | É o que faz a skill disparar. Alterar muda quando ela é invocada. |
+| `description` do frontmatter | É o que faz a skill disparar. Alterar muda quando ela é invocada. Ela abre com o gatilho (`Use quando…`) porque o Hermes mostra só os primeiros ~60 caracteres na lista de skills, e fica abaixo de 1.024 caracteres porque o Copilot CLI e o Hermes descartam a skill acima disso. Aspas simples dentro dela: aspas duplas viram `&quot;` no Copilot e no OpenClaw. |
+| Tamanho do `SKILL.md` | Abaixo de 15.000 caracteres. Acima disso o OpenClaw, em modelo de contexto menor que 100K tokens, recusa a leitura ou entrega o arquivo cortado. Regra nova ou exemplo novo vão para `references/regras-*.md`; no `SKILL.md` só entra a linha do índice. |
+| `metadata` do frontmatter | Só valores string (`version: "1.3.0"`, `tags: "a, b"`). O Hermes recusa a skill inteira se um valor de `metadata` for lista ou número. |
+| Versão | Mesma em `metadata.version`, `.claude-plugin/plugin.json` e `plugin.json`. `teste_versao_unica` reprova divergência. |
 | Numeração `PTC-N` | Os casos de teste referenciam por número. Renumerar quebra todos de uma vez. |
 | Tabela de níveis | PTC-1, PTC-7 e PTC-8 são obrigatórias nos três níveis. Relaxar qualquer uma em `leve` desmonta o desenho — ortografia errada não fica menos errada em texto informal. |
 | Seção "O que NÃO é erro" (`ortografia-ptbr.md`) | É o que impede a skill de virar corretor que conserta português correto. |
@@ -66,11 +72,17 @@ Se a mudança toca mais de uma regra, quebre em sessões e rode `./init.sh` entr
 
 ## Versões portáteis
 
-`tools/build.py` acha a skill em `SKILL.md` + `references/*.md` e escreve cinco variantes em
-`dist/` mais a página `docs/index.html`. Três consertos que o bundle achatado exige, e que é o
-que o script existe para fazer: tirar o frontmatter YAML, tirar o aviso de edição, e reescrever
-`references/X.md` para o título da seção correspondente — no arquivo único esses caminhos
-apontam para nada.
+`tools/build.py` acha a skill em `skills/portugues-tecnico-controlado/` (`SKILL.md` +
+`references/*.md`) e escreve cinco variantes em `dist/` mais a página `docs/index.html`. Dois
+consertos que o bundle achatado exige, e que é o que o script existe para fazer: tirar o
+frontmatter YAML e reescrever `references/X.md` para o título da seção correspondente — no
+arquivo único esses caminhos apontam para nada. O compacto leva o `SKILL.md`, as duas
+`references/regras-*.md` e três tabelas do léxico, sem os exemplos.
+
+Até a v1.2 o `SKILL.md` abria com um comentário HTML avisando quem edita para não corrigir os
+`❌`. Ele saiu na v1.3: o modelo lia o aviso a cada invocação, e scanners de segurança de skill
+(SkillSpector) marcam "ignore este bloco" como injeção de prompt. O aviso mora no topo deste
+arquivo.
 
 O script **morre com exit 1** se uma seção que ele corta ou mantém pelo nome não existir mais.
 Renomear um H2 do `SKILL.md` passa a quebrar o build em vez de emitir um bundle truncado em
@@ -111,7 +123,7 @@ pela mesma razão: é grátis.
 ### Antes de acrescentar palavra ao léxico
 
 `teste_colisao_lexico_skill` varre a coluna "Evite" do `lexico.md` e do `ruido-ia.md` contra as
-linhas com ✅ do `SKILL.md`. Termo proibido de um lado e prescrito do outro é a
+linhas com ✅ do `SKILL.md` e das duas `references/regras-*.md` (`PRESCRITOS` no runner). Termo proibido de um lado e prescrito do outro é a
 assinatura do `apenas` e do `executar`: os dois arquivos vão concatenados no
 mesmo prompt, e **nenhum caso pega isso** — a saída sai certa metade das vezes.
 
@@ -152,7 +164,7 @@ As 8 rodadas fecharam com **zero achado de falso positivo**, e o subproduto vale
 
 Estado entre rodadas em `loops/loop-state.md`. Para um objetivo novo, escreva outro `goal-*.md` — cada um precisa de objetivo, verificação executável, condição de parada e restrições.
 
-O runner concatena `SKILL.md` + `references/*.md` **deste repo** e manda para `claude -p`. Ele testa o arquivo que você acabou de editar, não a cópia instalada em `~/.claude/skills/`.
+O runner concatena `SKILL.md` + `references/*.md` de `skills/portugues-tecnico-controlado/` **deste repo** e manda para `claude -p`. Como ele manda tudo de uma vez, a suite não detecta um modelo que pule a leitura de `references/regras-*.md` no uso real; é por isso que o `SKILL.md` manda ler as duas antes da varredura. Ele testa o arquivo que você acabou de editar, não a cópia instalada em `~/.claude/skills/`.
 
 Ele **não compara texto** — output de LLM não é determinístico. Verifica quatro coisas:
 
@@ -328,12 +340,17 @@ Antes de encerrar a sessão:
 ## Estrutura
 
 ```
-SKILL.md                  # 9 regras, 3 níveis, processo, formato de saída
-references/
-  lexico.md               # evite→use, conectores, variante BR, siglas
-  ortografia-ptbr.md      # Acordo de 1990, armadilhas de TI, o que não é erro
-  ingles.md               # regras STE-EN, pipeline bilíngue, decalques
-  ruido-ia.md             # PTC-9: metatexto, enchimento, inflação (adaptado da deai-text)
+skills/portugues-tecnico-controlado/   # a skill instalável
+  SKILL.md                # índice das 9 regras, 3 níveis, processo, formato de saída
+  references/
+    regras-desambiguacao.md  # PTC-1 a PTC-5 completas
+    regras-consistencia.md   # PTC-6 a PTC-9 completas
+    lexico.md             # evite→use, conectores, variante BR, siglas
+    ortografia-ptbr.md    # Acordo de 1990, armadilhas de TI, o que não é erro
+    ingles.md             # regras STE-EN, pipeline bilíngue, decalques
+    ruido-ia.md           # PTC-9: metatexto, enchimento, inflação (adaptado da deai-text)
+.claude-plugin/           # plugin.json + marketplace.json: Claude Code, Codex, Copilot CLI, OpenClaw
+plugin.json               # manifesto Agent Plugins v1: Hermes (mesma versão do outro)
 tests/
   verify.py               # runner
   legibilidade.py         # Flesch-PT (Martins 1996) sobre os contadores do textstat

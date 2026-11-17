@@ -35,6 +35,8 @@ ADVERSARIAL = os.environ.get("PTC_ADVERSARIAL", "") not in ("", "0")
 PREFIXO_ADV = "caso-adv"
 AQUI = Path(__file__).resolve().parent
 REPO = AQUI.parent
+# Layout de plugin: Claude Code, Codex, Hermes e OpenClaw acham a skill aqui.
+SKILL = REPO / "skills" / "portugues-tecnico-controlado"
 
 VERDE, VERMELHO, AMARELO, CINZA, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[90m", "\033[0m"
 
@@ -50,8 +52,8 @@ ROTULOS = ("faltou", "corrigiu indevidamente", "não apareceu", "métrica")
 
 def carregar_skill():
     """Concatena a skill do repo. Testa o arquivo em edição, não o instalado."""
-    partes = [REPO / "SKILL.md"]
-    partes += sorted((REPO / "references").glob("*.md"))
+    partes = [SKILL / "SKILL.md"]
+    partes += sorted((SKILL / "references").glob("*.md"))
     faltando = [p for p in partes if not p.exists()]
     if faltando:
         sys.exit(f"erro: arquivo da skill não encontrado: {faltando[0]}")

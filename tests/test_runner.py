@@ -286,18 +286,21 @@ def teste_filtro_adversarial():
 # uma ainda estar aqui. Não é allowlist de conveniência: é a lista de dívidas
 # triadas, e o check falha nos **dois** sentidos — colisão nova entra, colisão
 # resolvida tem de sair. Allowlist que só cresce vira o check morto da rodada 1.
+# Linhas citadas abaixo: `regras-desambiguacao.md` (o texto da PTC-1 a PTC-5
+# saiu do SKILL.md na v1.3, sem mudar uma palavra).
 COLISOES = {
     "validar": "item 3 do loop-state, sem oscilação medida. `lexico.md:30` manda "
-               "congelar um sentido (verificar OU aprovar); o SKILL.md prescreve "
-               "`Valide` em três exemplos ✅",
-    "gerar": "mesma dívida. `lexico.md:33` chama de genérico demais; `SKILL.md:76` "
-             "prescreve `para gerar o relatório` ✅",
+               "congelar um sentido (verificar OU aprovar); `regras-desambiguacao.md` "
+               "prescreve `Valide` em três exemplos ✅ (linhas 72, 85, 88)",
+    "gerar": "mesma dívida. `lexico.md:33` chama de genérico demais; "
+             "`regras-desambiguacao.md:41` prescreve `para gerar o relatório` ✅",
     "atualizar": "mesma dívida. `lexico.md:31` separa update/refresh; "
-                 "`SKILL.md:56-57` prescreve `atualiza o status` ✅",
-    "a mesma": "falso positivo de granularidade de linha: o ✅ da linha 51 marca "
-               "`Verifica-se a integridade`, e `a mesma licença` é prosa vizinha",
-    "realizar": "falso positivo de granularidade de linha: a linha 107 tem ❌ e ✅, "
-                "e `Realize` está do lado ❌",
+                 "`regras-desambiguacao.md:18-19` prescreve `atualiza o status` ✅",
+    "a mesma": "falso positivo de granularidade de linha: o ✅ de "
+               "`regras-desambiguacao.md:12` marca `Verifica-se a integridade`, e "
+               "`a mesma licença` é prosa vizinha",
+    "realizar": "falso positivo de granularidade de linha: `regras-desambiguacao.md:72` "
+                "tem ❌ e ✅, e `Realize` está do lado ❌",
 }
 
 
@@ -305,6 +308,10 @@ COLISOES = {
 # do léxico: vai concatenado no prompt, e um termo que ele manda cortar e o
 # SKILL.md prescreve como ✅ é a mesma oscilação do `apenas`.
 TABELAS_EVITE = ("references/lexico.md", "references/ruido-ia.md")
+# Onde mora forma prescrita (linha com ✅). Desde a v1.3 o texto completo das
+# regras está em references/, e um ✅ de lá vai para o mesmo prompt que o léxico.
+# Varrer só o SKILL.md deixaria o check verde sem olhar quase nada.
+PRESCRITOS = ("SKILL.md", "references/regras-desambiguacao.md", "references/regras-consistencia.md")
 
 
 def termos_do_lexico():
@@ -320,7 +327,7 @@ def termos_do_lexico():
     linhas = []
     for arquivo in TABELAS_EVITE:
         # Linha vazia entre arquivos: fecha a tabela do anterior.
-        linhas += (verify.REPO / arquivo).read_text(encoding="utf-8").splitlines() + [""]
+        linhas += (verify.SKILL / arquivo).read_text(encoding="utf-8").splitlines() + [""]
     for linha in linhas:
         if not linha.startswith("|"):
             cabecalho = False
@@ -367,9 +374,10 @@ def teste_colisao_lexico_skill():
     (linha 227) também prescreve e fica de fora — hoje todo termo de lá já é
     pego por um ✅.
     """
-    linhas = [l for l in (verify.REPO / "SKILL.md").read_text(encoding="utf-8").splitlines()
+    linhas = [l for arquivo in PRESCRITOS
+              for l in (verify.SKILL / arquivo).read_text(encoding="utf-8").splitlines()
               if "✅" in l]
-    assert linhas, "nenhuma linha com ✅ no SKILL.md — o check varreria nada"
+    assert linhas, "nenhuma linha com ✅ nas regras — o check varreria nada"
 
     achadas = {t for t in termos_do_lexico()
                if any(re.search(rf"\b{re.escape(raiz_lexical(t))}\w*", l, re.IGNORECASE)
@@ -381,6 +389,23 @@ def teste_colisao_lexico_skill():
         "\n       Nova: o léxico proíbe um termo que o SKILL.md prescreve como ✅."
         "\n       Divida o sentido no léxico (linha com uso `mantenha`) ou triague"
         "\n       em COLISOES com o motivo. Sumiu: resolvida — apague a entrada.")
+
+
+def teste_versao_unica():
+    """SKILL.md e os dois manifestos de plugin anunciam a mesma versão.
+
+    `.claude-plugin/plugin.json` serve Claude Code, Codex, Copilot CLI e
+    OpenClaw; `plugin.json` (Agent Plugins v1) serve o Hermes. Dois arquivos
+    com a mesma informação divergem no primeiro bump feito à mão.
+    """
+    import json
+    skill = (verify.SKILL / "SKILL.md").read_text(encoding="utf-8").split("\n---", 1)[0]
+    achou = re.search(r'^\s+version:\s*"?([^"\n]+)"?\s*$', skill, re.MULTILINE)
+    assert achou, "SKILL.md sem metadata.version"
+    versoes = {"SKILL.md": achou.group(1)}
+    for manifesto in (".claude-plugin/plugin.json", "plugin.json"):
+        versoes[manifesto] = json.loads((verify.REPO / manifesto).read_text(encoding="utf-8"))["version"]
+    assert len(set(versoes.values())) == 1, f"versões divergentes: {versoes}"
 
 
 if __name__ == "__main__":

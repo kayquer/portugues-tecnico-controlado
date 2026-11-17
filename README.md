@@ -4,25 +4,26 @@
 
 # Português Técnico Controlado (PTC)
 
-O **Português Técnico Controlado (PTC)** é uma skill do [Claude Code](https://claude.com/claude-code) que reescreve texto técnico em português do Brasil para que ele tenha **uma leitura só**. Também funciona no Claude.ai, Cursor, Codex, Gemini CLI, ChatGPT e Perplexity.
+O **Português Técnico Controlado (PTC)** é uma skill do [Claude Code](https://claude.com/claude-code) que reescreve texto técnico em português do Brasil para que ele tenha **uma leitura só**. Também funciona no Claude.ai, Codex, Copilot CLI, OpenCode, OpenClaw, Hermes, Cursor, Gemini CLI, ChatGPT e Perplexity.
 
 Quem executa um procedimento não pode parar para perguntar "você quis dizer X ou Y?". Um modelo que consome uma instrução também não. O texto precisa responder antes.
 
 Inspirado no [ASD-STE100](https://www.asd-ste100.org/), o padrão de linguagem controlada da indústria aeroespacial. Não é uma tradução dele. O STE resolve os problemas do inglês, e o maior problema do português nem aparece lá: o inglês obriga o sujeito, então o padrão nunca precisou de uma regra para isso. As 9 regras daqui foram escritas para o português, e o porquê está no fim.
 
-No Claude Code:
-
-```bash
-git clone https://github.com/kayquer/portugues-tecnico-controlado ~/.claude/skills/portugues-tecnico-controlado
-```
-
-Ou como plugin:
+No Claude Code, como plugin:
 
 ```
 /plugin install portugues-tecnico-controlado --marketplace kayquer/portugues-tecnico-controlado
 ```
 
-Para Claude.ai, Cursor, Codex, Gemini CLI, ChatGPT e Perplexity, a **[página de instalação](https://kayquer.github.io/portugues-tecnico-controlado/)** tem o comando ou o botão de copiar de cada um.
+No Hermes, como plugin:
+
+```bash
+hermes plugins install kayquer/portugues-tecnico-controlado
+hermes plugins enable portugues-tecnico-controlado
+```
+
+Em Claude Code, Codex, Copilot CLI, OpenCode, OpenClaw e Hermes, como skill: ver [Instalação](#instalação). Para Claude.ai, Cursor, Gemini CLI, ChatGPT e Perplexity, a **[página de instalação](https://kayquer.github.io/portugues-tecnico-controlado/)** tem o comando ou o botão de copiar de cada um.
 
 ---
 
@@ -170,13 +171,26 @@ O português esconde informação em lugares onde o inglês obriga a declarar.
 
 Guia passo a passo para cada ferramenta: **[kayquer.github.io/portugues-tecnico-controlado](https://kayquer.github.io/portugues-tecnico-controlado/)**.
 
-No Claude Code:
+A skill fica em `skills/portugues-tecnico-controlado/`. Copie essa pasta inteira, com `references/`, para a pasta de skills do seu agente:
 
 ```bash
-git clone https://github.com/kayquer/portugues-tecnico-controlado ~/.claude/skills/portugues-tecnico-controlado
+git clone --depth 1 https://github.com/kayquer/portugues-tecnico-controlado /tmp/ptc
+cp -r /tmp/ptc/skills/portugues-tecnico-controlado ~/.claude/skills/
 ```
 
-O Claude Code registra a skill na próxima sessão. Sem dependências: nenhum pacote, nenhuma outra skill, nenhuma chamada de rede.
+| Agente | Pasta de skills do usuário |
+|---|---|
+| Claude Code | `~/.claude/skills/` |
+| Codex, Copilot CLI, OpenClaw, OpenCode | `~/.agents/skills/` |
+| OpenCode | também lê `~/.claude/skills/` e `~/.config/opencode/skills/` |
+| OpenClaw | também lê `~/.openclaw/skills/` |
+| Hermes | `~/.hermes/skills/` |
+
+Como plugin, o repositório traz dois manifestos: `.claude-plugin/plugin.json` (Claude Code, Codex, Copilot CLI, OpenClaw) e `plugin.json` no formato [Agent Plugins](https://agent-plugins.org/) v1 (Hermes). O Hermes instala plugin desativado: rode `hermes plugins enable portugues-tecnico-controlado` depois do `install`. O OpenCode não instala plugin de manifesto, só skill.
+
+O agente registra a skill na próxima sessão. Sem dependências: nenhum pacote, nenhuma outra skill, nenhuma chamada de rede.
+
+**Instalou antes da v1.3 com `git clone` direto em `~/.claude/skills/portugues-tecnico-controlado`?** Na v1.3 o `SKILL.md` saiu da raiz do repositório para `skills/portugues-tecnico-controlado/`, e um `git pull` nessa pasta deixa a skill sem `SKILL.md` na raiz. Apague a pasta e instale de novo com os comandos acima.
 
 ### Outros agentes
 
@@ -240,7 +254,7 @@ Quatro delas, em uma linha cada:
 | **PTC-5** | `a validação do cadastro do cliente do contrato` | `Valide o cadastro. Esse cadastro pertence ao cliente do contrato.` |
 | **PTC-9** | `Além disso, vale destacar que a solução conta com uma arquitetura robusta de microsserviços.` | `A solução tem arquitetura de microsserviços.` |
 
-A PTC-8 é higiene, não o ponto da skill: o Acordo de 1990 é regra fechada, e um corretor resolve boa parte dele. Fica porque um caso concentra quase todo o erro em texto de TI — prefixo terminado em vogal + palavra começada por `r` ou `s` junta e dobra a consoante (`micro-serviço` → **microsserviço**, `auto-serviço` → **autosserviço**, `anti-racismo` → **antirracismo**). O resto do Acordo, a acentuação e as armadilhas de vocabulário técnico ficam em [`references/ortografia-ptbr.md`](references/ortografia-ptbr.md), carregado sob demanda.
+A PTC-8 é higiene, não o ponto da skill: o Acordo de 1990 é regra fechada, e um corretor resolve boa parte dele. Fica porque um caso concentra quase todo o erro em texto de TI — prefixo terminado em vogal + palavra começada por `r` ou `s` junta e dobra a consoante (`micro-serviço` → **microsserviço**, `auto-serviço` → **autosserviço**, `anti-racismo` → **antirracismo**). O resto do Acordo, a acentuação e as armadilhas de vocabulário técnico ficam em [`references/ortografia-ptbr.md`](skills/portugues-tecnico-controlado/references/ortografia-ptbr.md), carregado sob demanda.
 
 ---
 
@@ -294,7 +308,7 @@ Se no passo 3 uma regra do português exigir informação que o inglês não tin
 | # | ator | ação | objeto | condição | resultado/erro | valor+unidade | modalidade |
 |---|---|---|---|---|---|---|---|
 
-Falha quando uma célula existe numa versão e não na outra, quando a contagem de passos imperativos difere, ou quando um termo do glossário aparece traduzido de dois jeitos. Detalhes em [`references/ingles.md`](references/ingles.md).
+Falha quando uma célula existe numa versão e não na outra, quando a contagem de passos imperativos difere, ou quando um termo do glossário aparece traduzido de dois jeitos. Detalhes em [`references/ingles.md`](skills/portugues-tecnico-controlado/references/ingles.md).
 
 ---
 
@@ -338,12 +352,17 @@ Traduzir as 53 regras do ASD-STE100 uma a uma não funciona, por duas razões si
 
 ```
 portugues-tecnico-controlado/
-├── SKILL.md                        # 9 regras, 3 níveis, processo, formato de saída
-├── references/
-│   ├── lexico.md                   # evite→use, conectores ambíguos, variante BR, siglas
-│   ├── ortografia-ptbr.md          # Acordo de 1990, armadilhas de TI, o que não é erro
-│   ├── ingles.md                   # regras STE-EN, pipeline bilíngue, decalques e falsos amigos
-│   └── ruido-ia.md                 # PTC-9: metatexto, enchimento, inflação, atribuição vaga
+├── skills/portugues-tecnico-controlado/   # a skill: é esta pasta que se instala
+│   ├── SKILL.md                    # índice das 9 regras, 3 níveis, processo, formato de saída
+│   └── references/
+│       ├── regras-desambiguacao.md # PTC-1 a PTC-5 completas
+│       ├── regras-consistencia.md  # PTC-6 a PTC-9 completas
+│       ├── lexico.md               # evite→use, conectores ambíguos, variante BR, siglas
+│       ├── ortografia-ptbr.md      # Acordo de 1990, armadilhas de TI, o que não é erro
+│       ├── ingles.md               # regras STE-EN, pipeline bilíngue, decalques e falsos amigos
+│       └── ruido-ia.md             # PTC-9: metatexto, enchimento, inflação, atribuição vaga
+├── .claude-plugin/                 # manifesto de plugin: Claude Code, Codex, Copilot CLI, OpenClaw
+├── plugin.json                     # manifesto Agent Plugins v1: Hermes
 ├── dist/                           # versões portáteis, geradas — não edite à mão
 ├── docs/index.html                 # página de instalação, gerada — não edite à mão
 ├── tools/build.py                  # gera dist/ e docs/ a partir da skill
@@ -354,7 +373,7 @@ portugues-tecnico-controlado/
 └── AGENTS.md                       # como editar a skill sem quebrá-la
 ```
 
-**A skill é `SKILL.md` + `references/`.** O resto do repositório é harness de desenvolvimento e não vai para o prompt. Os arquivos de `references/` carregam sob demanda: `ortografia-ptbr.md` entra quando surge dúvida de grafia, `ingles.md` entra só quando o par EN/PT importa.
+**A skill é `SKILL.md` + `references/`, dentro de `skills/portugues-tecnico-controlado/`.** O resto do repositório é harness de desenvolvimento e não vai para o prompt. O `SKILL.md` fica abaixo de 15.000 caracteres, o limite que o OpenClaw lê de uma vez em modelos de contexto menor; por isso o texto completo das regras mora em `references/regras-*.md`, que a skill manda ler antes de varrer o texto. `ortografia-ptbr.md` entra quando surge dúvida de grafia, `ingles.md` entra só quando o par EN/PT importa.
 
 ---
 
