@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Português Técnico Controlado (PTC): instalar a skill no Claude, ChatGPT e Cursor</title>
-<meta name="description" content="Skill gratuita que reescreve texto técnico em português do Brasil para ter uma leitura só. 9 regras inspiradas no ASD-STE100, 3 níveis de rigor e modo bilíngue EN/PT. Instale no Claude Code, Claude.ai, ChatGPT, Perplexity, Cursor, Codex e Gemini CLI.">
+<meta name="description" content="Skill gratuita que reescreve texto técnico em português do Brasil para ter uma leitura só. 9 regras inspiradas no ASD-STE100, 3 níveis de rigor e modo bilíngue EN/PT. Instale no Claude Code, Claude.ai, ChatGPT, Perplexity, Cursor, Codex, Copilot CLI, OpenCode, OpenClaw, Hermes e Gemini CLI.">
 <link rel="canonical" href="https://kayquer.github.io/portugues-tecnico-controlado/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="pt_BR">
@@ -132,9 +132,31 @@ footer{margin-top:3.5rem; padding-top:1.5rem; border-top:1px solid var(--linha);
     <h3><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg> Claude Code</h3>
     <p>Instala como skill nativa, com as referências carregando sob demanda. É a forma completa.</p>
     <div class="acao">
-      <pre><code id="cmd-cc">git clone https://github.com/kayquer/portugues-tecnico-controlado ~/.claude/skills/portugues-tecnico-controlado</code></pre>
-      <p style="margin:.6rem 0 .5rem">Invoque com <code>/portugues-tecnico-controlado</code>.</p>
+      <pre><code id="cmd-cc">git clone --depth 1 https://github.com/kayquer/portugues-tecnico-controlado /tmp/ptc
+cp -r /tmp/ptc/skills/portugues-tecnico-controlado ~/.claude/skills/</code></pre>
+      <p style="margin:.6rem 0 .5rem">Invoque com <code>/portugues-tecnico-controlado</code>. Ou como plugin: <code>/plugin install portugues-tecnico-controlado --marketplace kayquer/portugues-tecnico-controlado</code>.</p>
       <button data-copy="#cmd-cc"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar comando</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg> OpenClaw · OpenCode · Codex · Copilot CLI</h3>
+    <p>Skill nativa, a mesma pasta do Claude Code. Todos leem <code>~/.agents/skills/</code>.</p>
+    <div class="acao">
+      <pre><code id="cmd-agentskills">git clone --depth 1 https://github.com/kayquer/portugues-tecnico-controlado /tmp/ptc
+mkdir -p ~/.agents/skills
+cp -r /tmp/ptc/skills/portugues-tecnico-controlado ~/.agents/skills/</code></pre>
+      <button data-copy="#cmd-agentskills"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar comando</span><span class="ck">Copiado</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg> Hermes</h3>
+    <p>Instala como plugin no formato Agent Plugins v1. O Hermes instala desativado; o segundo comando ativa.</p>
+    <div class="acao">
+      <pre><code id="cmd-hermes">hermes plugins install kayquer/portugues-tecnico-controlado
+hermes plugins enable portugues-tecnico-controlado</code></pre>
+      <button data-copy="#cmd-hermes"><svg class="cp" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><svg class="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span class="cp">Copiar comando</span><span class="ck">Copiado</span></button>
     </div>
   </div>
 

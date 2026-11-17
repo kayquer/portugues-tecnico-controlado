@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verificação da skill PTC. Roda os casos de tests/casos/ contra o SKILL.md
+# Verificação da skill PTC. Roda os casos de tests/casos/ contra skills/portugues-tecnico-controlado/
 # deste repo. Ver AGENTS.md para o fluxo de desenvolvimento.
 #
 #   ./init.sh                    todos os casos
